@@ -1,0 +1,49 @@
+Freshness/
+│
+├── app/                            # All screens live here
+│   ├── _layout.tsx                # Root navigation (Stack layout)
+│   ├── index.tsx                  # Default redirect (to splash)
+│   ├── splash.tsx                 # Splash screen (3s delay)
+│
+│   ├── auth/                      # Authentication pages
+│   │   ├── welcome.tsx           # Welcome (Sign Up | Login)
+│   │   ├── login.tsx             # Login screen
+│   │   └── signup.tsx            # Sign up screen
+│
+│   ├── customer/                  # All customer features
+│   │   ├── home.tsx              # Dashboard (main menu)
+│   │   ├── book.tsx              # Book Laundry Pickup
+│   │   ├── track.tsx             # Track My Order
+│   │   ├── pricing.tsx           # Pricing page
+│   │   ├── orders.tsx            # My Orders history
+│   │   └── support.tsx           # FAQs, Contact, Help
+│
+├── rider/
+│   ├── RiderDashboard.tsx
+│   ├── OrderDetailsScreen.tsx
+│   ├── NavigationScreen.tsx          # Task list, Pickup/Delivery status
+│
+├── admin/
+│   ├── DashboardScreen.tsx
+│   ├── UsersScreen.tsx
+│   ├── RidersScreen.tsx
+│   ├── OrdersScreen.tsx
+│   ├── PricingScreen.tsx
+│   ├── ReportsScreen.tsx
+│   ├── NotificationsScreen.tsx
+│   └── FeedbackScreen.tsx dashboard.tsx         # Admin control panel
+│
+├── assets/                        # Images, logos, fonts
+│   └── logo.png
+│
+├── src/                           # Source helpers, context, etc.
+│   ├── theme/
+│   │   └── colors.js              # Central color variables
+│   ├── components/               # Reusable UI components (e.g., Button, Header)
+│   ├── api/                      # Axios requests to backend
+│   ├── context/                  # User context (Auth, roles, etc.)
+│   └── utils/                    # Formatters, constants, etc.
+│
+├── babel.config.js               # Reanimated plugin etc.
+├── package.json
+└── tsconfig.json (if TypeScript)

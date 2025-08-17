@@ -1,42 +1,56 @@
 {
   "expo": {
-    "name": "FreshnessNew",
-    "slug": "FreshnessNew",
+    "name": "Freshness",
+    "slug": "Freshness",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "freshnessnew",
+    "icon": "./assets/images/log.png",
+    "scheme": "freshness",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
+      "package": "com.freshness.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/log.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "permissions": [
+        "INTERNET",
+        "VIBRATE",
+        "ACCESS_NETWORK_STATE"
+      ]
     },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+    "ios": {
+      "bundleIdentifier": "com.freshness.app",
+      "supportsTablet": true
     },
     "plugins": [
-      "expo-router",
+      "expo-splash-screen",
+      "expo-notifications",
+      "expo-font",
+      "expo-web-browser",
       [
-        "expo-splash-screen",
+        "@rnmapbox/maps",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "RNMapboxMapsDownloadToken": "${MAPBOX_DOWNLOADS_TOKEN}"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.7.22",
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "buildToolsVersion": "34.0.0"
+          }
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true
+    "extra": {
+      "eas": {
+        "projectId": "97d46ce2-8e8b-4791-bd12-0a6d918aa4cb"
+      }
     }
   }
 }
