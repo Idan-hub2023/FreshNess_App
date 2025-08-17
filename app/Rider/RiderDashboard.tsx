@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 
 import Icon from 'react-native-vector-icons/MaterialIcons';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width, height } = Dimensions.get('window');
 
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoiaXJhaG96YSIsImEiOiJjbWUya3ZzZWcwbW8xMmtyMmM1bGFwMW8yIn0.9WHhqP1CMroXatCoO1MwHw'; 
