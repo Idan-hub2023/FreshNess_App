@@ -10,6 +10,7 @@
     "android": {
       "package": "com.freshness.app",
       "versionCode": 1,
+      "googleServicesFile": "./android/app/google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/log.png",
         "backgroundColor": "#ffffff"
@@ -17,12 +18,14 @@
       "permissions": [
         "INTERNET",
         "VIBRATE",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "POST_NOTIFICATIONS"
       ]
     },
     "ios": {
       "bundleIdentifier": "com.freshness.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "usesAppleSignIn": false
     },
     "plugins": [
       "expo-splash-screen",

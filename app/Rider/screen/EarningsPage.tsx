@@ -186,7 +186,6 @@ const fetchEarnings = async () => {
               <Text style={styles.breakdownTime}>{item.time}</Text>
               <Text style={styles.breakdownCustomer}>{item.customer}</Text>
             </View>
-            <Text style={styles.breakdownAmount}>+RWF {Math.round(item.totalAmount * 0.1)?.toLocaleString()}</Text>
           </View>
         ))
       ) : (
@@ -205,7 +204,6 @@ const fetchEarnings = async () => {
               <Text style={styles.breakdownDay}>{item.day}</Text>
               <Text style={styles.breakdownOrders}>{item.orders} orders</Text>
             </View>
-            <Text style={styles.breakdownAmount}>RWF {Math.round(item.totalAmount * 0.1)?.toLocaleString()}</Text>
           </View>
         ))
       ) : (
@@ -224,7 +222,6 @@ const fetchEarnings = async () => {
               <Text style={styles.breakdownWeek}>{item.week}</Text>
               <Text style={styles.breakdownOrders}>{item.orders} orders</Text>
             </View>
-            <Text style={styles.breakdownAmount}>RWF {Math.round(item.amount * 0.1)?.toLocaleString()}</Text>
           </View>
         ))
       ) : (
