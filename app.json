@@ -10,7 +10,7 @@
     "android": {
       "package": "com.freshness.app",
       "versionCode": 1,
-      "googleServicesFile": "./android/app/google-services.json",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/log.png",
         "backgroundColor": "#ffffff"
@@ -42,17 +42,16 @@
         "expo-build-properties",
         {
           "android": {
-            "kotlinVersion": "1.7.22",
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34,
-            "buildToolsVersion": "34.0.0"
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
           }
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "97d46ce2-8e8b-4791-bd12-0a6d918aa4cb"
+        "projectId": "054c7db6-3cd2-4b3b-b97d-9ad2202fddf7"
       }
     }
   }

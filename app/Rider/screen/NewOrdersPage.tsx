@@ -35,7 +35,6 @@ export default function RiderOrdersScreen() {
     NotificationService.configure();
     fetchOrders();
   }, []);
-
 const fetchOrders = async () => {
   try {
     const riderData = await AsyncStorage.getItem('user');
@@ -47,9 +46,8 @@ const fetchOrders = async () => {
 
     const rider = JSON.parse(riderData);
 
-    // Take the first assigned zone or fallback to workingLocation param
     const location = (rider.assignedZone && rider.assignedZone.length > 0)
-      ? rider.assignedZone
+      ? rider.assignedZone[0]
       : workingLocation;
 
     if (!location) {
@@ -60,12 +58,7 @@ const fetchOrders = async () => {
 
     // Call backend assignRiderByLocation API
     const res = await axios.get(`${API_BASE_URL}/assign/${encodeURIComponent(location)}`);
-    const ordersForRider = res.data.rider.assignedBookings || [];
-
-    // Fetch full booking details
-    const bookingDetails = await Promise.all(
-      ordersForRider.map(id => axios.get(`${API_BASE_URL}/assign/${id}`).then(r => r.data))
-    );
+    const bookingDetails = res.data.bookings || [];
 
     setOrders(bookingDetails);
 
@@ -76,6 +69,7 @@ const fetchOrders = async () => {
     setLoading(false);
   }
 };
+
 
 
 

@@ -9,18 +9,23 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "MAPBOX_DOWNLOADS_TOKEN": "@MAPBOX_DOWNLOADS_TOKEN"
+      }
     },
     "production": {
       "autoIncrement": true,
-        "android": {
+      "android": {
         "buildType": "apk"
       },
       "env": {
         "MAPBOX_DOWNLOADS_TOKEN": "@MAPBOX_DOWNLOADS_TOKEN"
       }
     }
-
   },
   "submit": {
     "production": {}
