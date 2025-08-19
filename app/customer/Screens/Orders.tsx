@@ -90,9 +90,9 @@ export default function OrderHistory() {
         }
 
         return {
-          id: order._id,
+          id: order.bookingCode,
           status: status,
-          dbStatus: order.status || 'pending', // Keep original DB status for filtering
+          dbStatus: order.status || 'pending',
           date: formattedDate,
           service: order.serviceType || 'Laundry Service',
           location: order.address || 'Unknown Location',

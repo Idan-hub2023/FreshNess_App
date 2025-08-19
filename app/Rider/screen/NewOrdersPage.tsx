@@ -31,10 +31,27 @@ export default function RiderOrdersScreen() {
   // workingLocation from route params fallback
   const { workingLocation } = useLocalSearchParams();
 
-  useEffect(() => {
-    NotificationService.configure();
-    fetchOrders();
-  }, []);
+useEffect(() => {
+  NotificationService.configure(handleNewOrder);
+  fetchOrders();
+}, []);
+
+  const handleNewOrder = async (orderId) => {
+  if (!orderId) return;
+
+  try {
+    const res = await axios.get(`${API_BASE_URL}/orders/${orderId}`);
+    const newOrder = res.data.order;
+
+    if (!newOrder) return;
+
+    setOrders(prevOrders => [newOrder, ...prevOrders]);
+    Alert.alert('New Order', `Order for ${newOrder.customerName || 'Customer'} assigned to you!`);
+  } catch (error) {
+    console.error('Failed to fetch new order:', error);
+  }
+};
+
 const fetchOrders = async () => {
   try {
     const riderData = await AsyncStorage.getItem('user');

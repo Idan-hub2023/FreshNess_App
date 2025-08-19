@@ -52,7 +52,6 @@ export default function BookLaundryPickup() {
   const [showItemModal, setShowItemModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [itemsLoading, setItemsLoading] = useState(false);
-  const [addressType, setAddressType] = useState('manual');
   const [showMapModal, setShowMapModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -200,8 +199,8 @@ export default function BookLaundryPickup() {
       Alert.alert('Phone Required', 'Please enter your phone number');
       return false;
     }
-    if (!address.trim()) {
-      Alert.alert('Address Required', 'Please enter your pickup address');
+    if (!address.trim() || !confirmedLocation) {
+      Alert.alert('Location Required', 'Please select your pickup location on the map');
       return false;
     }
     if (getTotalItems() === 0) {
@@ -555,70 +554,43 @@ export default function BookLaundryPickup() {
           )}
         </View>
 
-        {/* Address */}
+        {/* Address - Map Only */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="location-outline" size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Pickup Address</Text>
           </View>
-          <View style={styles.addressTypeContainer}>
-            <TouchableOpacity
-              style={[styles.addressTypeBtn, addressType === 'manual' && styles.addressTypeBtnActive]}
-              onPress={() => setAddressType('manual')}
-            >
-              <Ionicons name="create-outline" size={18} color={addressType === 'manual' ? '#fff' : colors.primary} />
-              <Text style={[styles.addressTypeBtnText, addressType === 'manual' && styles.addressTypeBtnTextActive]}>
-                Manual Input
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.addressTypeBtn, addressType === 'map' && styles.addressTypeBtnActive]}
-              onPress={() => setAddressType('map')}
-            >
-              <Ionicons name="map-outline" size={18} color={addressType === 'map' ? '#fff' : colors.primary} />
-              <Text style={[styles.addressTypeBtnText, addressType === 'map' && styles.addressTypeBtnTextActive]}>
-                Use Map
-              </Text>
-            </TouchableOpacity>
-          </View>
 
-          {addressType === 'manual' ? (
-            <TextInput 
-              placeholder="Enter full address with landmarks *"
-              style={styles.input}
-              value={address}
-              onChangeText={setAddress}
-              multiline
-              numberOfLines={3}
-              placeholderTextColor={colors.textLight}
-            />
-          ) : (
-            <View style={styles.mapContainer}>
-              <TouchableOpacity 
-                style={styles.mapButton}
-                onPress={() => {
-                  setSelectedLocation(confirmedLocation ? 
-                    [confirmedLocation.longitude, confirmedLocation.latitude] : 
-                    currentLocation ? 
-                    [currentLocation.longitude, currentLocation.latitude] : 
-                    null
-                  );
-                  setShowMapModal(true);
-                }}
-              >
-                <Ionicons name="map" size={20} color={colors.primary} />
-                <Text style={styles.mapButtonText}>
-                  {address ? 'Change Location on Map' : 'Select Location on Map'}
-                </Text>
-              </TouchableOpacity>
-              {address && (
-                <View style={styles.selectedAddressContainer}>
-                  <Text style={styles.selectedAddressLabel}>Selected Address:</Text>
-                  <Text style={styles.selectedAddressText}>{address}</Text>
-                </View>
-              )}
-            </View>
-          )}
+          <View style={styles.mapContainer}>
+            <TouchableOpacity 
+              style={styles.mapButton}
+              onPress={() => {
+                setSelectedLocation(confirmedLocation ? 
+                  [confirmedLocation.longitude, confirmedLocation.latitude] : 
+                  currentLocation ? 
+                  [currentLocation.longitude, currentLocation.latitude] : 
+                  null
+                );
+                setShowMapModal(true);
+              }}
+            >
+              <Ionicons name="map" size={20} color={colors.primary} />
+              <Text style={styles.mapButtonText}>
+                {address ? 'Change Location on Map' : 'Select Location on Map *'}
+              </Text>
+            </TouchableOpacity>
+            {address && (
+              <View style={styles.selectedAddressContainer}>
+                <Text style={styles.selectedAddressLabel}>Selected Address:</Text>
+                <Text style={styles.selectedAddressText}>{address}</Text>
+                {confirmedLocation && (
+                  <Text style={styles.coordinatesText}>
+                    Coordinates: {confirmedLocation.latitude.toFixed(6)}, {confirmedLocation.longitude.toFixed(6)}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Delivery Option */}
@@ -832,7 +804,7 @@ const styles = StyleSheet.create({
   contentContainer: { padding: 20, paddingBottom: 40 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   logo: { width: 50, height: 50, borderRadius: 10 },
-  heading: { fontSize: 24, fontWeight: '700', color: colors.primary, flex: 1 ,marginTop:30, },
+  heading: { fontSize: 24, fontWeight: '700', color: colors.primary, flex: 1, marginTop: 30 },
   section: { marginBottom: 20, backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.textDark, marginLeft: 8 },
@@ -854,17 +826,18 @@ const styles = StyleSheet.create({
   datetimeContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   datetimeInput: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.lightBorder, borderRadius: 12, padding: 16, marginRight: 10 },
   datetimeText: { marginLeft: 10, color: colors.textDark, fontSize: 16 },
-  addressTypeContainer: { flexDirection: 'row', marginBottom: 12, gap: 8 },
-  addressTypeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.lightBorder, backgroundColor: '#fff' },
-  addressTypeBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  addressTypeBtnText: { marginLeft: 8, color: colors.textDark },
-  addressTypeBtnTextActive: { color: '#fff' },
   mapContainer: { marginBottom: 8 },
   mapButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: colors.lightBorder, borderRadius: 12, padding: 16 },
   mapButtonText: { marginLeft: 10, color: colors.textDark, fontSize: 16 },
   selectedAddressContainer: { marginTop: 12, padding: 16, backgroundColor: '#f8f8f8', borderRadius: 12, borderWidth: 1, borderColor: colors.lightBorder },
   selectedAddressLabel: { fontSize: 14, color: colors.textLight, marginBottom: 4 },
   selectedAddressText: { fontSize: 15, color: colors.textDark, marginBottom: 4 },
+  coordinatesText: { 
+    fontSize: 12, 
+    color: colors.textLight, 
+    marginTop: 4, 
+    fontFamily: 'monospace' 
+  },
   cardInputRow: { flexDirection: 'row', justifyContent: 'space-between' },
   confirmBtn: { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 18, borderRadius: 16, marginTop: 24, shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
   confirmBtnDisabled: { backgroundColor: colors.textLight, opacity: 0.7 },
@@ -878,6 +851,25 @@ const styles = StyleSheet.create({
   mapModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: colors.lightBorder },
   mapModalTitle: { fontSize: 18, fontWeight: '600', color: colors.textDark },
   mapModalMap: { width: '100%', height: '70%' },
+  mapMarker: { 
+    width: 30, 
+    height: 30, 
+    borderRadius: 15, 
+    backgroundColor: colors.primary, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5
+  },
+  mapMarkerInner: { 
+    width: 12, 
+    height: 12, 
+    borderRadius: 6, 
+    backgroundColor: '#fff' 
+  },
   mapModalActions: { width: '100%', padding: 16, backgroundColor: '#fff', alignItems: 'center', gap: 12 },
   mapModalConfirmBtn: { width: '100%', backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, borderRadius: 12 },
   mapModalConfirmText: { color: '#fff', fontWeight: '700', fontSize: 16, marginRight: 8 },
@@ -904,26 +896,26 @@ const styles = StyleSheet.create({
   noItemsText: { fontSize: 18, color: colors.textLight, marginTop: 16, marginBottom: 20 },
   refreshBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.accent + '20', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 },
   refreshBtnText: { marginLeft: 8, color: colors.primary, fontWeight: '600' },
-backButton: {
-  position: 'absolute',
-  left: 16,
-  top: 1,
-  bottom:20,
-  padding: 10,
-  zIndex: 10,
-  backgroundColor: colors.accent, // Use your accent color
-  borderRadius: 20,
-  width: 40,
-  height: 40,
-  justifyContent: 'center',
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: {
-    width: 0,
-    height: 2,
+  backButton: {
+    position: 'absolute',
+    left: 16,
+    top: 1,
+    bottom: 20,
+    padding: 10,
+    zIndex: 10,
+    backgroundColor: colors.accent,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
-  shadowOpacity: 0.25,
-  shadowRadius: 3.84,
-  elevation: 5,
-},
 });

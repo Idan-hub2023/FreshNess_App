@@ -6,9 +6,9 @@ import { Alert, Platform } from 'react-native';
 const API_BASE_URL = 'https://freshness-eakm.onrender.com/api';
 
 class NotificationService {
-  static async configure() {
+  static async configure(onNewOrder) {
     try {
-      // Request permission
+      // 1. Request permissions
       const authStatus = await messaging().requestPermission();
       const enabled =
         authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
@@ -19,15 +19,11 @@ class NotificationService {
         return null;
       }
 
-      // Get FCM token
+      // 2. Get FCM token
       const fcmToken = await messaging().getToken();
-      if (!fcmToken) {
-        console.log('Failed to get FCM token');
-        return null;
-      }
-      console.log('✅ FCM Token:', fcmToken);
+      if (!fcmToken) return null;
 
-      // Send FCM token to backend
+      // 3. Save token to backend
       const riderData = await AsyncStorage.getItem('user');
       if (riderData) {
         const rider = JSON.parse(riderData);
@@ -35,12 +31,65 @@ class NotificationService {
           riderId: rider._id,
           pushToken: fcmToken,
         });
-        console.log('✅ FCM token sent to backend');
       }
 
-      // Optional: foreground notification handling
+      // 4. Create notification channel (Android)
+      if (Platform.OS === 'android') {
+        await messaging().createNotificationChannel({
+          id: 'high_priority',
+          name: 'High Priority Notifications',
+          description: 'Important order notifications',
+          importance: 4, // IMPORTANCE_HIGH
+          sound: 'default',
+          vibration: true,
+          vibrationPattern: [300, 500],
+          lights: true,
+          lightColor: '#FF231F7C',
+          showBadge: true,
+          badgeIconType: 1, // LARGE
+        });
+      }
+
+      // 5. Foreground message handler
       messaging().onMessage(async remoteMessage => {
-        Alert.alert(remoteMessage.notification.title, remoteMessage.notification.body);
+        if (Platform.OS === 'android') {
+          remoteMessage.android = {
+            ...remoteMessage.android,
+            channelId: 'high_priority',
+            priority: 'high',
+            sound: 'default',
+            vibrateTimingsMillis: [0, 500, 500],
+          };
+        }
+
+        Alert.alert(
+          remoteMessage.notification.title,
+          remoteMessage.notification.body
+        );
+
+        if (remoteMessage.data?.orderId && onNewOrder) {
+          onNewOrder(remoteMessage.data.orderId);
+        }
+      });
+
+      // 6. Background/Quit state handlers
+      messaging().setBackgroundMessageHandler(async remoteMessage => {
+        if (remoteMessage.data?.orderId && onNewOrder) {
+          onNewOrder(remoteMessage.data.orderId);
+        }
+        return Promise.resolve();
+      });
+
+      messaging().onNotificationOpenedApp(remoteMessage => {
+        if (remoteMessage.data?.orderId && onNewOrder) {
+          onNewOrder(remoteMessage.data.orderId);
+        }
+      });
+
+      messaging().getInitialNotification().then(remoteMessage => {
+        if (remoteMessage?.data?.orderId && onNewOrder) {
+          onNewOrder(remoteMessage.data.orderId);
+        }
       });
 
       return { fcmToken };

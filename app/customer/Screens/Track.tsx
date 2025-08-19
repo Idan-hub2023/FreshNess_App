@@ -99,7 +99,7 @@ const OrderTrackingPage = () => {
 
         <View style={styles.orderCard}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Order ID: {order._id || '#OrderID'}</Text>
+            <Text style={styles.headerTitle}>Order ID: {order.bookingCode || 'bookingCode'}</Text>
             <Text style={styles.orderDate}>Pickup: {new Date(order.pickupDate).toLocaleDateString()}</Text>
           </View>
 

@@ -1,3 +1,4 @@
+import MapboxGL from '@rnmapbox/maps';
 import * as Clipboard from 'expo-clipboard';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,7 +14,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import MapboxGL from '@rnmapbox/maps';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const { width, height } = Dimensions.get('window');
@@ -388,7 +388,7 @@ export default function NavigationScreen() {
             <View style={[styles.statusDot, { backgroundColor: getStatusColor(orderStatus) }]} />
             <Text style={styles.statusText}>{getStatusText(orderStatus)}</Text>
           </View>
-          <Text style={styles.orderId}>Order ID: {orderObj._id?.substring(0, 8) || 'N/A'}</Text>
+          <Text style={styles.orderId}>Order ID: {orderObj.bookingCode || 'N/A'}</Text>
           <Text style={styles.phoneNumber}>{orderObj.phoneNumber || 'No phone'}</Text>
         </View>
       </View>
@@ -624,7 +624,7 @@ export default function NavigationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginBlockStart: 20,
+    marginBlockStart: 5,
     backgroundColor: '#f8f9fa',
   },
   loadingContainer: {
