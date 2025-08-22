@@ -13,11 +13,18 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
+  View,
+  StatusBar,
+  Dimensions,
+  SafeAreaView
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient'; // You might need to install this
 
-    const baseURL = Platform.OS === 'android' 
+const { width } = Dimensions.get('window');
+
+const baseURL = Platform.OS === 'android' 
   ? 'https://freshness-eakm.onrender.com/api' 
   : 'http://192.168.1.67:5000/api';
 
@@ -30,19 +37,18 @@ export default function SettingsScreen() {
   const [image, setImage] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-    const router = useRouter();
+  const router = useRouter();
+
   useEffect(() => {
-  const checkAuth = async () => {
-    const token = await AsyncStorage.getItem('authToken');
-    if (!token) {
-      router.replace('/auth/login'); // Redirect if not logged in
-    }
-  };
+    const checkAuth = async () => {
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        router.replace('/auth/login');
+      }
+    };
+    checkAuth();
+  }, []);
 
-  checkAuth();
-}, []);
-
-  // ✅ Load user info from API
   useEffect(() => {
     const loadUser = async () => {
       const storedUserId = await AsyncStorage.getItem('userId');
@@ -59,7 +65,6 @@ export default function SettingsScreen() {
           setFullname(userData.fullname || '');
           setEmail(userData.email || '');
           setPhone(userData.phone?.toString() || '');
-          // ✅ FIXED: Handle both profileImage and profile fields
           setImage(userData.profileImage || userData.profile || null);
         }
       } catch (error) {
@@ -71,7 +76,6 @@ export default function SettingsScreen() {
     loadUser();
   }, []);
 
-  // ✅ Pick Image from gallery
   const pickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== 'granted') {
@@ -83,7 +87,7 @@ export default function SettingsScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 0.7,
-      aspect: [1, 1], // Square aspect ratio
+      aspect: [1, 1],
     });
 
     if (!result.canceled && result.assets.length > 0) {
@@ -92,7 +96,6 @@ export default function SettingsScreen() {
     }
   };
 
-  // ✅ FIXED: Update user profile with proper FormData handling
   const handleUpdate = async () => {
     if (!fullname || !email || !phone) {
       Alert.alert('Validation Error', 'All fields are required');
@@ -103,19 +106,13 @@ export default function SettingsScreen() {
     
     try {
       const formData = new FormData();
-
-      // Add text fields
       formData.append('fullname', fullname);
       formData.append('email', email);
       formData.append('phone', phone);
 
-      // ✅ FIXED: Handle image upload properly
       if (image && !image.startsWith('http')) {
-        // This is a new local image that needs to be uploaded
         const uriParts = image.split('/');
         const fileName = uriParts[uriParts.length - 1];
-        
-        // Get file extension from URI or default to jpg
         const fileExtension = fileName.split('.').pop() || 'jpg';
         const finalFileName = `profile-${Date.now()}.${fileExtension}`;
         
@@ -126,25 +123,18 @@ export default function SettingsScreen() {
         });
       }
 
-      console.log('Sending update request for user:', userId);
-
       const res = await axios.put(`${baseURL}/user/update/${userId}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 30000, // 30 second timeout for image upload
+        timeout: 30000,
       });
-
-      console.log('Update response:', res.data);
 
       if (res.data.user) {
         const updatedUser = res.data.user;
-        
-        // Update local storage
         await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
         setUser(updatedUser);
         
-        // Update local state with the new image URL from server
         if (updatedUser.profileImage) {
           setImage(updatedUser.profileImage);
         }
@@ -159,7 +149,6 @@ export default function SettingsScreen() {
       
       if (error.response) {
         errorMessage = error.response.data?.message || 'Server error occurred';
-        console.error('Server response:', error.response.data);
       } else if (error.request) {
         errorMessage = 'Network error. Please check your connection.';
       }
@@ -170,161 +159,316 @@ export default function SettingsScreen() {
     }
   };
 
-  // ✅ Logout
-const handleLogout = async () => {
-  try {
-    const token = await AsyncStorage.getItem('authToken');
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const token = await AsyncStorage.getItem('authToken');
 
-    if (token) {
-      await axios.post(`${baseURL}/logout`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-    }
-  } catch (error) {
-    console.log('Logout API call failed:', error.response?.data || error.message);
-  } finally {
-    // Clear token and any saved user info
-    await AsyncStorage.clear();
-
-    // Redirect to login screen
-    router.replace('/auth/login');
-  }
-};
+              if (token) {
+                await axios.post(`${baseURL}/logout`, {}, {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                });
+              }
+            } catch (error) {
+              console.log('Logout API call failed:', error.response?.data || error.message);
+            } finally {
+              await AsyncStorage.clear();
+              router.replace('/auth/login');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Icon name="arrow-back" size={24} color="#000" />
-      </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#1e40af" />
+      
+      {/* Header with Gradient */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Icon name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Profile Settings</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
-      <Text style={styles.title}>Profile Settings</Text>
-
-      <TouchableOpacity onPress={pickImage}>
-        <Image
-          source={{ 
-            uri: image || 'https://via.placeholder.com/100?text=No+Image' 
-          }}
-          style={styles.image}
-        />
-        <Text style={styles.changePhoto}>Tap to change photo</Text>
-      </TouchableOpacity>
-
-      <TextInput
-        placeholder="Full Name"
-        value={fullname}
-        onChangeText={setFullname}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        placeholder="Phone"
-        value={phone}
-        onChangeText={setPhone}
-        style={styles.input}
-        keyboardType="phone-pad"
-      />
-
-      <TouchableOpacity 
-        style={[styles.button, isLoading && styles.buttonDisabled]} 
-        onPress={handleUpdate} 
-        disabled={isLoading}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Save Changes</Text>
-        )}
-      </TouchableOpacity>
+        {/* Profile Image Section */}
+        <View style={styles.profileSection}>
+          <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
+            <View style={styles.imageWrapper}>
+              <Image
+                source={{ 
+                  uri: image || 'https://via.placeholder.com/120x120/e5e7eb/9ca3af?text=User' 
+                }}
+                style={styles.profileImage}
+              />
+              <View style={styles.cameraIconContainer}>
+                <Icon name="camera-alt" size={20} color="#fff" />
+              </View>
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.changePhotoText}>Tap to change photo</Text>
+        </View>
 
-      <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        {/* Form Section */}
+        <View style={styles.formContainer}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Full Name</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="person" size={20} color="#9ca3af" style={styles.inputIcon} />
+              <TextInput
+                placeholder="Enter your full name"
+                value={fullname}
+                onChangeText={setFullname}
+                style={styles.textInput}
+                placeholderTextColor="#9ca3af"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Email Address</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="email" size={20} color="#9ca3af" style={styles.inputIcon} />
+              <TextInput
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={setEmail}
+                style={styles.textInput}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor="#9ca3af"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Phone Number</Text>
+            <View style={styles.inputWrapper}>
+              <Icon name="phone" size={20} color="#9ca3af" style={styles.inputIcon} />
+              <TextInput
+                placeholder="Enter your phone number"
+                value={phone}
+                onChangeText={setPhone}
+                style={styles.textInput}
+                keyboardType="phone-pad"
+                placeholderTextColor="#9ca3af"
+              />
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <TouchableOpacity 
+            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]} 
+            onPress={handleUpdate} 
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <Icon name="save" size={20} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            onPress={handleLogout} 
+            style={styles.logoutButton}
+            activeOpacity={0.7}
+          >
+            <Icon name="logout" size={20} color="#ef4444" style={styles.buttonIcon} />
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    backgroundColor: '#fff',
-    flexGrow: 1,
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#1e40af',
+  },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#1e40af',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 20,
+  backButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
-  image: {
+  headerTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+    textAlign: 'center',
+    marginHorizontal: 16,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  scrollView: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  profileSection: {
+    alignItems: 'center',
+    paddingTop: 40,
+    paddingBottom: 30,
+    backgroundColor: '#fff',
+    marginBottom: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  imageContainer: {
+    marginBottom: 16,
+  },
+  imageWrapper: {
+    position: 'relative',
+  },
+  profileImage: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    marginBottom: 10,
+    borderWidth: 4,
+    borderColor: '#e5e7eb',
   },
-  changePhoto: {
-    color: '#1d4ed8',
-    fontSize: 14,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 16,
-  },
-  button: {
-    backgroundColor: '#1d4ed8',
-    padding: 15,
-    borderRadius: 10,
-    width: '100%',
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: '#1e40af',
+    borderRadius: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
-  buttonDisabled: {
-    opacity: 0.7,
+  changePhotoText: {
+    color: '#1e40af',
+    fontSize: 14,
+    fontWeight: '500',
   },
-  buttonText: {
+  formContainer: {
+    paddingHorizontal: 20,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#374151',
+    paddingVertical: 16,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1e40af',
+    paddingVertical: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#1e40af',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+    elevation: 1,
+    shadowOpacity: 0.1,
+  },
+  saveButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   logoutButton: {
-    marginTop: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    marginTop: 20,
   },
-  backButton: {
-  position: 'absolute',
-  left: 16,
-  top: 46,
-  padding: 10,
-  zIndex: 10,
-  backgroundColor: colors.accent, // Use your accent color
-  borderRadius: 20,
-  width: 40,
-  height: 40,
-  justifyContent: 'center',
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: {
-    width: 0,
-    height: 2,
-  },
-  shadowOpacity: 0.25,
-  shadowRadius: 3.84,
-  elevation: 5,
-},
-  logoutText: {
+  logoutButtonText: {
     color: '#ef4444',
-    fontWeight: 'bold',
     fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  buttonIcon: {
+    marginRight: 4,
   },
 });

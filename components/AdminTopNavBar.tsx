@@ -37,7 +37,7 @@ export default function TopNavBar() {
   }, []);
 
   const goToProfile = () => {
-    router.push('/app/Admin/Profile');
+    router.push('/Setting');
   };
 
   return (

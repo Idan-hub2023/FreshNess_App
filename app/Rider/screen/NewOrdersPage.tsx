@@ -22,73 +22,131 @@ export default function RiderOrdersScreen() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [notificationError, setNotificationError] = useState(null);
   const router = useRouter();
 
-      const API_BASE_URL = Platform.OS === 'android' 
+  const API_BASE_URL = Platform.OS === 'android' 
     ? 'https://freshness-eakm.onrender.com/api' 
     : 'http://192.168.1.67:5000/api';
   
   // workingLocation from route params fallback
   const { workingLocation } = useLocalSearchParams();
 
-useEffect(() => {
-  NotificationService.configure(handleNewOrder);
-  fetchOrders();
-}, []);
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        console.log('🎯 Initializing RiderOrdersScreen...');
+        
+        // Setup notifications with error handling
+        console.log('🔔 Setting up notifications...');
+        try {
+          await NotificationService.configure(handleNewOrder);
+          setNotificationError(null);
+        } catch (notifError) {
+          console.error('❌ Notification setup failed:', notifError);
+          setNotificationError('Notifications disabled');
+          // Continue even if notifications fail
+        }
+        
+        // Fetch orders
+        await fetchOrders();
+
+      } catch (error) {
+        console.error('❌ Initialization error:', error);
+        Alert.alert('Error', 'Failed to initialize app');
+      }
+    };
+
+    initializeApp();
+
+    return () => {
+      console.log('🧹 Cleaning up...');
+    };
+  }, []);
 
   const handleNewOrder = async (orderId) => {
-  if (!orderId) return;
-
-  try {
-    const res = await axios.get(`${API_BASE_URL}/orders/${orderId}`);
-    const newOrder = res.data.order;
-
-    if (!newOrder) return;
-
-    setOrders(prevOrders => [newOrder, ...prevOrders]);
-    Alert.alert('New Order', `Order for ${newOrder.customerName || 'Customer'} assigned to you!`);
-  } catch (error) {
-    console.error('Failed to fetch new order:', error);
-  }
-};
-
-const fetchOrders = async () => {
-  try {
-    const riderData = await AsyncStorage.getItem('user');
-    if (!riderData) {
-      Alert.alert('Login required', 'Please login again.');
-      setLoading(false);
+    console.log('🎯 handleNewOrder triggered with orderId:', orderId);
+    
+    if (!orderId || orderId === 'test_order_id') {
+      console.log('❌ Invalid orderId provided');
       return;
     }
 
-    const rider = JSON.parse(riderData);
+    try {
+      console.log('📦 Fetching order details for:', orderId);
+      const res = await axios.get(`${API_BASE_URL}/orders/${orderId}`);
+      
+      if (!res.data || !res.data.order) {
+        console.log('❌ No order data received');
+        return;
+      }
 
-    const location = (rider.assignedZone && rider.assignedZone.length > 0)
-      ? rider.assignedZone[0]
-      : workingLocation;
+      const newOrder = res.data.order;
+      console.log('✅ New order received:', {
+        id: newOrder._id,
+        customer: newOrder.customerName,
+        status: newOrder.status
+      });
 
-    if (!location) {
-      Alert.alert('Error', 'No assigned location found for rider.');
-      setLoading(false);
-      return;
+      // Add order to list (avoid duplicates)
+      setOrders(prevOrders => {
+        if (prevOrders.some(order => order._id === newOrder._id)) {
+          console.log('⚠️ Order already exists in list');
+          return prevOrders;
+        }
+        return [newOrder, ...prevOrders];
+      });
+
+      // Show alert
+      Alert.alert(
+        'New Order Assigned! 🚚',
+        `Order for ${newOrder.customerName || 'Customer'} has been assigned to you`
+      );
+
+    } catch (error) {
+      console.error('❌ Failed to fetch new order:', error);
     }
+  };
 
-    // Call backend assignRiderByLocation API
-    const res = await axios.get(`${API_BASE_URL}/assign/${encodeURIComponent(location)}`);
-    const bookingDetails = res.data.bookings || [];
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const riderData = await AsyncStorage.getItem('user');
+      if (!riderData) {
+        Alert.alert('Login required', 'Please login again.');
+        setLoading(false);
+        return;
+      }
 
-    setOrders(bookingDetails);
+      const rider = JSON.parse(riderData);
+      console.log('👤 Rider data:', rider.fullname);
 
-  } catch (error) {
-    console.error('Failed to fetch orders:', error);
-    Alert.alert('Error', 'Could not load orders. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+      const location = (rider.assignedZone && rider.assignedZone.length > 0)
+        ? rider.assignedZone[0]
+        : workingLocation;
 
+      if (!location) {
+        Alert.alert('Error', 'No assigned location found for rider.');
+        setLoading(false);
+        return;
+      }
 
+      console.log('📍 Fetching orders for location:', location);
+      
+      // Call backend assignRiderByLocation API
+      const res = await axios.get(`${API_BASE_URL}/assign/${encodeURIComponent(location)}`);
+      const bookingDetails = res.data.bookings || [];
+      
+      console.log('✅ Orders fetched:', bookingDetails.length);
+      setOrders(bookingDetails);
 
+    } catch (error) {
+      console.error('❌ Failed to fetch orders:', error);
+      Alert.alert('Error', 'Could not load orders. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -111,34 +169,34 @@ const fetchOrders = async () => {
     return status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ');
   };
 
-const navigateToCustomer = (order) => {
-  router.push({
-    pathname: '/Rider/screen/NavigationScreen',
-    params: { 
-      order: JSON.stringify({
-        ...order,
-        _id: order._id,
-        customerName: order.customerName || 'Customer',
-        phoneNumber: order.phoneNumber || '',
-        serviceType: order.serviceType || 'Standard Service',
-        clothingItems: order.clothingItems || [],
-        pickupDate: order.pickupDate || new Date().toISOString(),
-        pickupTime: order.pickupTime || new Date().toISOString(),
-        deliveryOption: order.deliveryOption || 'Standard',
-        address: order.address || 'Address not available',
-        location: order.location || {},
-        instructions: order.instructions || '',
-        payment: order.payment || {
-          method: 'Unknown',
-          details: {}
-        },
-        totalAmount: order.totalAmount || 0,
-        status: order.status || 'pending',
-        createdAt: order.createdAt || new Date().toISOString()
-      })
-    },
-  });
-};
+  const navigateToCustomer = (order) => {
+    router.push({
+      pathname: '/Rider/screen/NavigationScreen',
+      params: { 
+        order: JSON.stringify({
+          ...order,
+          _id: order._id,
+          customerName: order.customerName || 'Customer',
+          phoneNumber: order.phoneNumber || '',
+          serviceType: order.serviceType || 'Standard Service',
+          clothingItems: order.clothingItems || [],
+          pickupDate: order.pickupDate || new Date().toISOString(),
+          pickupTime: order.pickupTime || new Date().toISOString(),
+          deliveryOption: order.deliveryOption || 'Standard',
+          address: order.address || 'Address not available',
+          location: order.location || {},
+          instructions: order.instructions || '',
+          payment: order.payment || {
+            method: 'Unknown',
+            details: {}
+          },
+          totalAmount: order.totalAmount || 0,
+          status: order.status || 'pending',
+          createdAt: order.createdAt || new Date().toISOString()
+        })
+      },
+    });
+  };
 
   const renderOrderItem = ({ item }) => (
     <TouchableOpacity
@@ -153,11 +211,11 @@ const navigateToCustomer = (order) => {
             <Ionicons name="person" size={20} color="#fff" />
           </View>
           <View style={styles.customerDetails}>
-            <Text style={styles.customerName}>{item.customerName}</Text>
+            <Text style={styles.customerName}>{item.customerName || 'Customer'}</Text>
             <View style={styles.timeContainer}>
               <Ionicons name="time-outline" size={12} color="#6b7280" />
               <Text style={styles.timeText}>
-                {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                {item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Time unknown'}
               </Text>
             </View>
           </View>
@@ -172,13 +230,13 @@ const navigateToCustomer = (order) => {
         <View style={styles.detailRow}>
           <Ionicons name="location-outline" size={16} color="#6b7280" />
           <Text style={styles.addressText} numberOfLines={2}>
-            {item.location?.address || 'Address not available'}
+            {item.location?.address || item.address || 'Address not available'}
           </Text>
         </View>
         
         <View style={styles.detailRow}>
           <Ionicons name="cube-outline" size={16} color="#6b7280" />
-          <Text style={styles.serviceText}>{item.serviceType}</Text>
+          <Text style={styles.serviceText}>{item.serviceType || 'Standard Service'}</Text>
         </View>
 
         <View style={styles.estimateContainer}>
@@ -262,6 +320,9 @@ const navigateToCustomer = (order) => {
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Available Orders</Text>
           <Text style={styles.headerSubtitle}>Orders in your assigned zone</Text>
+          {notificationError && (
+            <Text style={styles.notificationError}>{notificationError}</Text>
+          )}
         </View>
         <TouchableOpacity 
           style={styles.refreshIconButton} 
@@ -286,7 +347,7 @@ const navigateToCustomer = (order) => {
         ) : (
           <FlatList
             data={orders}
-            keyExtractor={(item) => item._id}
+            keyExtractor={(item) => item._id?.toString() || Math.random().toString()}
             renderItem={renderOrderItem}
             contentContainerStyle={styles.list}
             refreshControl={
@@ -301,7 +362,7 @@ const navigateToCustomer = (order) => {
       {renderStatsFooter()}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -336,6 +397,12 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 14,
     color: '#6b7280',
+    marginBottom: 4,
+  },
+  notificationError: {
+    fontSize: 12,
+    color: '#ef4444',
+    fontStyle: 'italic',
   },
   refreshIconButton: {
     padding: 8,

@@ -11,10 +11,6 @@
       "package": "com.freshness.app",
       "versionCode": 1,
       "googleServicesFile": "./google-services.json",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/log.png",
-        "backgroundColor": "#ffffff"
-      },
       "permissions": [
         "INTERNET",
         "VIBRATE",
@@ -25,13 +21,16 @@
     "ios": {
       "bundleIdentifier": "com.freshness.app",
       "supportsTablet": true,
-      "usesAppleSignIn": false
+      "usesAppleSignIn": false,
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "plugins": [
       "expo-splash-screen",
-      "expo-notifications",
       "expo-font",
       "expo-web-browser",
+      "expo-notifications",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
       [
         "@rnmapbox/maps",
         {
@@ -45,13 +44,16 @@
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0"
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
           }
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "054c7db6-3cd2-4b3b-b97d-9ad2202fddf7"
+        "projectId": "6c7fd492-fa32-415e-87c2-45d75d3b29cf"
       }
     }
   }
