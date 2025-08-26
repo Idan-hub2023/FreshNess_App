@@ -34,11 +34,6 @@
         <data android:scheme="exp+freshness"/>
       </intent-filter>
     </activity>
-    <service android:name="io.invertase.firebase.messaging.RNFirebaseMessagingService" android:exported="false">
-      <intent-filter>
-        <action android:name="com.google.firebase.MESSAGING_EVENT"/>
-      </intent-filter>
-    </service>
     <receiver android:name="io.invertase.firebase.notifications.RNFirebaseNotificationReceiver"/>
     <receiver android:name="io.invertase.firebase.notifications.RNFirebaseNotificationsRebootReceiver" android:enabled="true" android:exported="true">
       <intent-filter>

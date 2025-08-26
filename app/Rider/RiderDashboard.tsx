@@ -19,14 +19,10 @@ import React, { useEffect, useState } from 'react';
 
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-
 const { width, height } = Dimensions.get('window');
 
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoiaXJhaG96YSIsImEiOiJjbWUya3ZzZWcwbW8xMmtyMmM1bGFwMW8yIn0.9WHhqP1CMroXatCoO1MwHw'; 
 Mapbox.setAccessToken(MAPBOX_ACCESS_TOKEN);
-
-const API_BASE = "https://freshness-eakm.onrender.com/api"; 
 
 export default function RiderDashboard() {
   const [currentLocation, setCurrentLocation] = useState(null);
@@ -35,30 +31,16 @@ export default function RiderDashboard() {
   const [apiLoading, setApiLoading] = useState(true);
   const [locationPermission, setLocationPermission] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [riderId, setRiderId] = useState(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     initializeApp();
+  }, []);
 
-    // ✅ send updates every 20s
-    const interval = setInterval(() => {
-      if (currentLocation && riderId) {
-        sendLocationToBackend(currentLocation);
-      }
-    }, 20000);
-
-    return () => clearInterval(interval);
-  }, [currentLocation, riderId]);
-
-  // Initialize app
+  // Initialize app with proper error handling
   const initializeApp = async () => {
     try {
-      const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        setRiderId(parsed._id);
-      }
       await getCurrentLocation();
       await fetchDryCleaners();
     } catch (error) {
@@ -89,7 +71,7 @@ export default function RiderDashboard() {
           [{ text: 'OK', style: 'cancel' }],
           { cancelable: true }
         );
-        return true; 
+        return true; // Prevent default behavior
       };
 
       checkAuth();
@@ -103,21 +85,27 @@ export default function RiderDashboard() {
     setApiLoading(true);
     try {
       const token = await AsyncStorage.getItem('authToken');
-      if (!token) throw new Error('No authentication token found');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
 
-      const response = await fetch(`${API_BASE}/drycleaner`, {
+      const response = await fetch('https://freshness-eakm.onrender.com/api/drycleaner', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        timeout: 10000
+        timeout: 10000 // 10 second timeout
       });
       
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const data = await response.json();
       
-      if (!Array.isArray(data)) throw new Error('Invalid data format received');
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid data format received');
+      }
       
       setDryCleaners(data.map(cleaner => ({
         _id: cleaner._id,
@@ -150,30 +138,11 @@ export default function RiderDashboard() {
     }
   };
 
-  // ✅ send rider location to backend
-  const sendLocationToBackend = async (loc) => {
-    try {
-      const token = await AsyncStorage.getItem('authToken');
-      if (!token || !riderId) return;
-
-      await axios.post(
-        `${API_BASE}/riders/update-location`,
-        {
-          riderId,
-          coordinates: [loc.longitude, loc.latitude],
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      console.log("✅ Rider location updated");
-    } catch (err) {
-      console.error("❌ Failed to update location:", err.message);
-    }
-  };
-
-  // Distance calculator
+  // Helper function to calculate distance between two coordinates
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 'Unknown';
-    const R = 6371; 
+    
+    const R = 6371; // Radius of the earth in km
     const dLat = deg2rad(lat2 - lat1);
     const dLon = deg2rad(lon2 - lon1); 
     const a = 
@@ -181,23 +150,31 @@ export default function RiderDashboard() {
       Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
       Math.sin(dLon/2) * Math.sin(dLon/2); 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    const d = R * c; 
+    const d = R * c; // Distance in km
     return d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`;
   };
 
-  const deg2rad = (deg) => deg * (Math.PI/180);
+  const deg2rad = (deg) => {
+    return deg * (Math.PI/180);
+  };
 
   const getCurrentLocation = async () => {
     setLoading(true);
     try {
+      // Check if location services are enabled
       const servicesEnabled = await Location.hasServicesEnabledAsync();
       if (!servicesEnabled) {
-        Alert.alert('Location Services Disabled','Please enable location services to continue.',
-          [{ text: 'OK', onPress: () => useDefaultLocation() }]
+        Alert.alert(
+          'Location Services Disabled',
+          'Please enable location services to continue.',
+          [
+            { text: 'OK', onPress: () => useDefaultLocation() }
+          ]
         );
         return;
       }
 
+      // Request permissions
       const { status } = await Location.requestForegroundPermissionsAsync();
       setLocationPermission(status);
       
@@ -213,9 +190,15 @@ export default function RiderDashboard() {
         return;
       }
 
+      // Get current position with timeout
       const location = await Promise.race([
-        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High, maximumAge: 10000 }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 15000))
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+          maximumAge: 10000,
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Location timeout')), 15000)
+        )
       ]);
 
       const newLocation = {
@@ -226,18 +209,20 @@ export default function RiderDashboard() {
       };
 
       setCurrentLocation(newLocation);
+      
+      // Update distances when location is obtained
       updateDistances(location.coords.latitude, location.coords.longitude);
-
-      // ✅ immediately push to backend
-      if (riderId) sendLocationToBackend(newLocation);
       
     } catch (error) {
       console.error('Error getting location:', error);
+      
       if (retryCount < 2) {
         setRetryCount(prev => prev + 1);
         setTimeout(() => getCurrentLocation(), 2000);
       } else {
-        Alert.alert('Location Error','Unable to get your current location. Using default Kigali.',
+        Alert.alert(
+          'Location Error',
+          'Unable to get your current location. Using default location (Kigali).',
           [{ text: 'OK', onPress: () => useDefaultLocation() }]
         );
       }
@@ -247,6 +232,7 @@ export default function RiderDashboard() {
   };
 
   const useDefaultLocation = () => {
+    // Default to Kigali coordinates
     const defaultLocation = {
       latitude: -1.9441,
       longitude: 30.0619,
@@ -256,25 +242,31 @@ export default function RiderDashboard() {
     setCurrentLocation(defaultLocation);
     updateDistances(defaultLocation.latitude, defaultLocation.longitude);
     setLoading(false);
-
-    if (riderId) sendLocationToBackend(defaultLocation);
   };
 
   const updateDistances = (latitude, longitude) => {
     setDryCleaners(prev => prev.map(cleaner => ({
       ...cleaner,
-      distance: calculateDistance(latitude, longitude, cleaner.latitude, cleaner.longitude)
+      distance: calculateDistance(
+        latitude,
+        longitude,
+        cleaner.latitude,
+        cleaner.longitude
+      )
     })));
   };
 
   const handleInitializationError = (error) => {
     console.error('Initialization error:', error);
-    Alert.alert('App Loading Error','Problem loading app. Check connection and try again.',
-      [{ text: 'Retry', onPress: () => initializeApp() },
-       { text: 'Exit', onPress: () => BackHandler.exitApp() }]
+    Alert.alert(
+      'App Loading Error',
+      'There was a problem loading the app. Please check your connection and try again.',
+      [
+        { text: 'Retry', onPress: () => initializeApp() },
+        { text: 'Exit', onPress: () => BackHandler.exitApp() }
+      ]
     );
   };
-
 
   const renderStars = (rating) => {
     const numRating = parseFloat(rating) || 0;

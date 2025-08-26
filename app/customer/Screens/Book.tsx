@@ -166,29 +166,90 @@ export default function BookLaundryPickup() {
     if (selectedTime) setPickupTime(selectedTime);
   };
 
-  const confirmMapLocation = async () => {
-    if (selectedLocation) {
-      try {
-        const reverseGeocode = await Location.reverseGeocodeAsync({
+const confirmMapLocation = async () => {
+  if (selectedLocation) {
+    try {
+      const reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: selectedLocation[1],
+        longitude: selectedLocation[0]
+      });
+      
+      if (reverseGeocode[0]) {
+        const { 
+          street, 
+          streetNumber,
+          sector, 
+          district, 
+          city, 
+          region, 
+          subregion,
+          name,
+          formattedAddress 
+        } = reverseGeocode[0];
+        
+        // Create an array of non-empty address components
+        const addressComponents = [
+          street && streetNumber ? `${street} ${streetNumber}` : street,
+          name,
+          sector, // This often contains landmark or place names
+          district,
+          subregion, // This might contain more specific location info
+          city,
+          region
+        ].filter(component => component && component.trim() !== '');
+        
+        // Remove duplicates while preserving order
+        const uniqueComponents = [...new Set(addressComponents)];
+        
+        // Format the final address
+        let formattedAddr = '';
+        if (uniqueComponents.length > 0) {
+          formattedAddr = uniqueComponents.join(', ');
+        } else if (formattedAddress) {
+          // Fallback to the system's formatted address if available
+          formattedAddr = formattedAddress;
+        } else {
+          // Last resort: use coordinates
+          formattedAddr = `Lat: ${selectedLocation[1].toFixed(6)}, Lng: ${selectedLocation[0].toFixed(6)}`;
+        }
+        
+        // Additional cleanup: remove multiple commas and trim
+        formattedAddr = formattedAddr
+          .replace(/,\s*,/g, ',')  // Remove double commas
+          .replace(/^,\s*|,\s*$/g, '')  // Remove leading/trailing commas
+          .trim();
+        
+        // If still empty or just commas, use a default format
+        if (!formattedAddr || formattedAddr === ',' || formattedAddr.match(/^[,\s]*$/)) {
+          formattedAddr = `Location near ${region || 'Rwanda'} (${selectedLocation[1].toFixed(4)}, ${selectedLocation[0].toFixed(4)})`;
+        }
+        
+        setAddress(formattedAddr);
+        setConfirmedLocation({
           latitude: selectedLocation[1],
           longitude: selectedLocation[0]
         });
-        if (reverseGeocode[0]) {
-          const { street, streetNumber, district, city, region } = reverseGeocode[0];
-          const formattedAddress = `${street || ''} ${streetNumber || ''}, ${district || ''}, ${city || ''}, ${region || ''}`
-            .replace(/,\s*,/g, ',').trim();
-          setAddress(formattedAddress);
-          setConfirmedLocation({
-            latitude: selectedLocation[1],
-            longitude: selectedLocation[0]
-          });
-        }
-        setShowMapModal(false);
-      } catch (error) {
-        Alert.alert('Error', 'Could not get address from location');
+        
+        console.log('Reverse geocode result:', reverseGeocode[0]);
+        console.log('Formatted address:', formattedAddr);
       }
+      setShowMapModal(false);
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      
+      // Fallback: create address from coordinates
+      const fallbackAddress = `Location: ${selectedLocation[1].toFixed(4)}, ${selectedLocation[0].toFixed(4)}`;
+      setAddress(fallbackAddress);
+      setConfirmedLocation({
+        latitude: selectedLocation[1],
+        longitude: selectedLocation[0]
+      });
+      
+      Alert.alert('Location Selected', 'Address details could not be retrieved, but location has been saved.');
+      setShowMapModal(false);
     }
-  };
+  }
+};
 
   const validateForm = () => {
     if (!customerName.trim()) {

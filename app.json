@@ -18,14 +18,7 @@
         "POST_NOTIFICATIONS"
       ]
     },
-    "ios": {
-      "bundleIdentifier": "com.freshness.app",
-      "supportsTablet": true,
-      "usesAppleSignIn": false,
-      "googleServicesFile": "./GoogleService-Info.plist"
-    },
     "plugins": [
-      "expo-splash-screen",
       "expo-font",
       "expo-web-browser",
       "expo-notifications",
@@ -53,7 +46,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "6c7fd492-fa32-415e-87c2-45d75d3b29cf"
+        "projectId": "6bfed7be-17b5-46b8-8d72-56562f87cd90"
       }
     }
   }
