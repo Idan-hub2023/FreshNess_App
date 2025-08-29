@@ -1,24 +1,25 @@
 import { Stack } from 'expo-router';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StatusBar, StyleSheet, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import BottomNavBar from '../../components/RiderBottomNavBar';
 
 const RiderDashboardLayout = () => {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom + 60 }]}>
-      {/* Screens will be injected here */}
-      <Stack screenOptions={{ headerShown: false }} />
-      
-      {/* Fixed Bottom Navigation */}
-      <View style={[styles.bottomNavWrapper, { bottom: insets.bottom }]}>
-        <BottomNavBar />
-      </View>
-    </View>
+    <SafeAreaProvider style={{ background: 'rgba(19, 50, 226, 1)' }}>
+      <SafeAreaView style={{ flex: 1, paddingBottom: insets.bottom + 60 }}>
+        <StatusBar style="light" />
+        <Stack screenOptions={{ headerShown: false }} />
+        <View style={[styles.bottomNavWrapper, { bottom: insets.bottom }]}>
+          <BottomNavBar />
+        </View>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 };
+
 
 export default RiderDashboardLayout;
 

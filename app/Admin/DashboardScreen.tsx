@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Animated,
+  BackHandler,
   Dimensions,
   ScrollView,
   StatusBar,
@@ -98,6 +99,21 @@ export default function AdminDashboard() {
     checkAuth();
   }, [])
 );
+
+
+  useFocusEffect(
+    useCallback(() => {
+      const backAction = () => {
+        return true; 
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        backAction
+      );
+      return () => backHandler.remove();
+    }, [])
+  );
 
   const renderCard = (section, index) => {
     const animatedStyle = {

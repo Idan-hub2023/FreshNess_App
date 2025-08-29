@@ -28,11 +28,8 @@ export default function EarningsPage() {
   const [workingZone, setWorkingZone] = useState('');
   const [grossTotal, setGrossTotal] = useState(0);
 
-      const baseURL = Platform.OS === 'android' 
-    ? 'https://freshness-eakm.onrender.com/api' 
-    : 'http://192.168.1.67:5000/api';
-  
-  
+      const baseURL = 'https://freshness-eakm.onrender.com/api';
+
 const fetchEarnings = async () => {
   try {
     setLoading(true);

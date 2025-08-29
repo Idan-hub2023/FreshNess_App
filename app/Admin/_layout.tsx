@@ -11,7 +11,7 @@ import TopNavBar from '@/components/AdminTopNavBar';
 export default function Layout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
+      <SafeAreaProvider style={{ background: '#1226ddff' }}>
         <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
           <StatusBar style="dark" />
           

@@ -14,7 +14,7 @@ class OrderService {
       const currentCoords = await LocationService.getCurrentPosition();
 
       // 🔥 Fetch orders from API
-      const response = await axios.get('http://localhost:5000/api/orders');
+      const response = await axios.get('https://freshness-eakm.onrender.com/api/orders');
       const allOrders = response.data;
 
       // ✅ Filter orders in Muhoza only if rider is in Muhoza

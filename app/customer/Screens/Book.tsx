@@ -1,3 +1,4 @@
+
 import colors from '@/constants/Colors';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,6 +13,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -26,9 +28,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 // Initialize Mapbox (put your access token here)
 Mapbox.setAccessToken('pk.eyJ1IjoiaXJhaG96YSIsImEiOiJjbWUya3ZzZWcwbW8xMmtyMmM1bGFwMW8yIn0.9WHhqP1CMroXatCoO1MwHw');
 
-const baseURL = Platform.OS === 'android' 
-  ? 'https://freshness-eakm.onrender.com/api' 
-  : 'http://192.168.1.67:5000/api';
+const baseURL = 'https://freshness-eakm.onrender.com/api';
 
 export default function BookLaundryPickup() {
   // State declarations
@@ -43,10 +43,6 @@ export default function BookLaundryPickup() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
   const [instructions, setInstructions] = useState('');
-  const [pin, setPin] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCVV, setCardCVV] = useState('');
   const [clothingItems, setClothingItems] = useState({});
   const [availableItems, setAvailableItems] = useState([]);
   const [showItemModal, setShowItemModal] = useState(false);
@@ -166,90 +162,90 @@ export default function BookLaundryPickup() {
     if (selectedTime) setPickupTime(selectedTime);
   };
 
-const confirmMapLocation = async () => {
-  if (selectedLocation) {
-    try {
-      const reverseGeocode = await Location.reverseGeocodeAsync({
-        latitude: selectedLocation[1],
-        longitude: selectedLocation[0]
-      });
-      
-      if (reverseGeocode[0]) {
-        const { 
-          street, 
-          streetNumber,
-          sector, 
-          district, 
-          city, 
-          region, 
-          subregion,
-          name,
-          formattedAddress 
-        } = reverseGeocode[0];
+  const confirmMapLocation = async () => {
+    if (selectedLocation) {
+      try {
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude: selectedLocation[1],
+          longitude: selectedLocation[0]
+        });
         
-        // Create an array of non-empty address components
-        const addressComponents = [
-          street && streetNumber ? `${street} ${streetNumber}` : street,
-          name,
-          sector, // This often contains landmark or place names
-          district,
-          subregion, // This might contain more specific location info
-          city,
-          region
-        ].filter(component => component && component.trim() !== '');
-        
-        // Remove duplicates while preserving order
-        const uniqueComponents = [...new Set(addressComponents)];
-        
-        // Format the final address
-        let formattedAddr = '';
-        if (uniqueComponents.length > 0) {
-          formattedAddr = uniqueComponents.join(', ');
-        } else if (formattedAddress) {
-          // Fallback to the system's formatted address if available
-          formattedAddr = formattedAddress;
-        } else {
-          // Last resort: use coordinates
-          formattedAddr = `Lat: ${selectedLocation[1].toFixed(6)}, Lng: ${selectedLocation[0].toFixed(6)}`;
+        if (reverseGeocode[0]) {
+          const { 
+            street, 
+            streetNumber,
+            sector, 
+            district, 
+            city, 
+            region, 
+            subregion,
+            name,
+            formattedAddress 
+          } = reverseGeocode[0];
+          
+          // Create an array of non-empty address components
+          const addressComponents = [
+            street && streetNumber ? `${street} ${streetNumber}` : street,
+            name,
+            sector, // This often contains landmark or place names
+            district,
+            subregion, // This might contain more specific location info
+            city,
+            region
+          ].filter(component => component && component.trim() !== '');
+          
+          // Remove duplicates while preserving order
+          const uniqueComponents = [...new Set(addressComponents)];
+          
+          // Format the final address
+          let formattedAddr = '';
+          if (uniqueComponents.length > 0) {
+            formattedAddr = uniqueComponents.join(', ');
+          } else if (formattedAddress) {
+            // Fallback to the system's formatted address if available
+            formattedAddr = formattedAddress;
+          } else {
+            // Last resort: use coordinates
+            formattedAddr = `Lat: ${selectedLocation[1].toFixed(6)}, Lng: ${selectedLocation[0].toFixed(6)}`;
+          }
+          
+          // Additional cleanup: remove multiple commas and trim
+          formattedAddr = formattedAddr
+            .replace(/,\s*,/g, ',')  // Remove double commas
+            .replace(/^,\s*|,\s*$/g, '')  // Remove leading/trailing commas
+            .trim();
+          
+          // If still empty or just commas, use a default format
+          if (!formattedAddr || formattedAddr === ',' || formattedAddr.match(/^[,\s]*$/)) {
+            formattedAddr = `Location near ${region || 'Rwanda'} (${selectedLocation[1].toFixed(4)}, ${selectedLocation[0].toFixed(4)})`;
+          }
+          
+          setAddress(formattedAddr);
+          setConfirmedLocation({
+            latitude: selectedLocation[1],
+            longitude: selectedLocation[0]
+          });
+          
+          console.log('Reverse geocode result:', reverseGeocode[0]);
+          console.log('Formatted address:', formattedAddr);
         }
+        setShowMapModal(false);
+      } catch (error) {
+        console.error('Reverse geocoding error:', error);
         
-        // Additional cleanup: remove multiple commas and trim
-        formattedAddr = formattedAddr
-          .replace(/,\s*,/g, ',')  // Remove double commas
-          .replace(/^,\s*|,\s*$/g, '')  // Remove leading/trailing commas
-          .trim();
-        
-        // If still empty or just commas, use a default format
-        if (!formattedAddr || formattedAddr === ',' || formattedAddr.match(/^[,\s]*$/)) {
-          formattedAddr = `Location near ${region || 'Rwanda'} (${selectedLocation[1].toFixed(4)}, ${selectedLocation[0].toFixed(4)})`;
-        }
-        
-        setAddress(formattedAddr);
+        // Fallback: create address from coordinates
+        const fallbackAddress = `Location: ${selectedLocation[1].toFixed(4)}, ${selectedLocation[0].toFixed(4)}`;
+        setAddress(fallbackAddress);
         setConfirmedLocation({
           latitude: selectedLocation[1],
           longitude: selectedLocation[0]
         });
         
-        console.log('Reverse geocode result:', reverseGeocode[0]);
-        console.log('Formatted address:', formattedAddr);
+        Alert.alert('Location Selected', 'Address details could not be retrieved, but location has been saved.');
+        setShowMapModal(false);
       }
-      setShowMapModal(false);
-    } catch (error) {
-      console.error('Reverse geocoding error:', error);
-      
-      // Fallback: create address from coordinates
-      const fallbackAddress = `Location: ${selectedLocation[1].toFixed(4)}, ${selectedLocation[0].toFixed(4)}`;
-      setAddress(fallbackAddress);
-      setConfirmedLocation({
-        latitude: selectedLocation[1],
-        longitude: selectedLocation[0]
-      });
-      
-      Alert.alert('Location Selected', 'Address details could not be retrieved, but location has been saved.');
-      setShowMapModal(false);
     }
-  }
-};
+  };
 
   const validateForm = () => {
     if (!customerName.trim()) {
@@ -268,19 +264,6 @@ const confirmMapLocation = async () => {
       Alert.alert('Items Required', 'Please select at least one clothing item');
       return false;
     }
-
-    if ((paymentMethod === 'MTN MoMo' || paymentMethod === 'Airtel Money') && !pin.trim()) {
-      Alert.alert('PIN Required', `Please enter your ${paymentMethod} PIN`);
-      return false;
-    }
-
-    if (paymentMethod === 'Visa/Mastercard') {
-      if (!cardNumber.trim() || !cardExpiry.trim() || !cardCVV.trim()) {
-        Alert.alert('Card Details Required', 'Please fill all card details');
-        return false;
-      }
-    }
-
     return true;
   };
 
@@ -305,16 +288,15 @@ const confirmMapLocation = async () => {
         address: address
       } : null;
 
-      let paymentDetails = {};
-      if (paymentMethod === 'MTN MoMo' || paymentMethod === 'Airtel Money') {
-        paymentDetails = { phoneNumber: phoneNumber.trim(), pin: pin.trim() };
-      } else if (paymentMethod === 'Visa/Mastercard') {
-        paymentDetails = {
-          cardNumber: cardNumber.trim(),
-          cardExpiry: cardExpiry.trim(),
-          cardCVV: cardCVV.trim()
-        };
-      }
+      // Map frontend payment methods to backend expected values
+      const paymentMethodMapping = {
+        'MTN MoMo': 'mtn momo',
+        'Airtel Money': 'airtel money', 
+        'Visa/Mastercard': 'card',
+        'Cash on Delivery': 'cash'
+      };
+
+      const mappedPaymentMethod = paymentMethodMapping[paymentMethod] || paymentMethod.toLowerCase();
 
       const formattedPickupDate = new Date(pickupDate).toISOString();
       const formattedPickupTime = new Date(pickupTime).toISOString();
@@ -355,8 +337,7 @@ const confirmMapLocation = async () => {
         address: address.trim(),
         location: geoLocation,
         instructions: instructions.trim(),
-        paymentMethod,
-        paymentDetails
+        paymentMethod: mappedPaymentMethod  // Use mapped value
       };
 
       console.log('Submitting booking:', bookingData);
@@ -369,15 +350,52 @@ const confirmMapLocation = async () => {
         timeout: 15000,
       });
 
-      const selectedItems = preparedClothingItems
-        .map(item => `${item.name}: ${item.quantity}`)
-        .join(', ');
+      // Handle different response scenarios
+      if (response.data.success) {
+        const { bookingId, bookingCode, paymentLink, assignedRider } = response.data;
+        
+        const selectedItems = preparedClothingItems
+          .map(item => `${item.name}: ${item.quantity}`)
+          .join(', ');
 
-      Alert.alert(
-        'Booking Confirmed ✅',
-        `Booking ID: ${response.data._id}\n\nService: ${serviceType}\nItems: ${selectedItems}\nTotal: RWF ${formatPrice(calculateTotal())}\nPickup: ${pickupDate.toLocaleDateString()} at ${pickupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}\n\nYou will receive a confirmation call shortly.`,
-        [{ text: 'OK', onPress: resetForm }]
-      );
+        let alertMessage = `Booking ID: ${bookingCode || bookingId}\n\nService: ${serviceType}\nItems: ${selectedItems}\nTotal: RWF ${formatPrice(calculateTotal())}\nPickup: ${pickupDate.toLocaleDateString()} at ${pickupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        
+        if (assignedRider) {
+          alertMessage += `\n\nRider: ${assignedRider.name}\nPhone: ${assignedRider.phone}`;
+        }
+
+        if (paymentLink) {
+          Alert.alert(
+            'Booking Created - Payment Required',
+            alertMessage + '\n\nPlease complete payment to confirm your booking.',
+            [
+              { 
+                text: 'Pay Now', 
+                onPress: () => {
+                  Linking.openURL(paymentLink).catch(err => {
+                    console.error('Failed to open payment link:', err);
+                    Alert.alert('Error', 'Could not open payment link. Please try again.');
+                  });
+                  resetForm();
+                }
+              },
+              { 
+                text: 'Pay Later', 
+                style: 'cancel',
+                onPress: resetForm 
+              }
+            ]
+          );
+        } else {
+          Alert.alert(
+            'Booking Confirmed',
+            alertMessage + '\n\nYou will receive a confirmation call shortly.',
+            [{ text: 'OK', onPress: resetForm }]
+          );
+        }
+      } else {
+        throw new Error(response.data.message || 'Booking creation failed');
+      }
 
     } catch (error) {
       console.error('Full booking error:', error);
@@ -405,10 +423,6 @@ const confirmMapLocation = async () => {
     setAddress('');
     setInstructions('');
     setClothingItems({});
-    setPin('');
-    setCardNumber('');
-    setCardExpiry('');
-    setCardCVV('');
     setConfirmedLocation(null);
     setSelectedLocation(null);
     setPickupDate(new Date());
@@ -661,7 +675,7 @@ const confirmMapLocation = async () => {
             <Text style={styles.sectionTitle}>Delivery Option</Text>
           </View>
           <View style={styles.optionsContainer}>
-            {['Same Day (+30%)', 'Next Day', '48 Hours (-10%)', '3-5 Days (-20%)'].map(option => (
+            {['Same Day ', 'Next Day', '48 Hours', '3-5 Days'].map(option => (
               <OptionButton 
                 key={option}
                 value={option} 
@@ -707,50 +721,16 @@ const confirmMapLocation = async () => {
             ))}
           </View>
           
-          {/* Payment Method Fields */}
-          {(paymentMethod === 'MTN MoMo' || paymentMethod === 'Airtel Money') && (
-            <TextInput
-              placeholder={`${paymentMethod} PIN *`}
-              style={styles.input}
-              secureTextEntry
-              value={pin}
-              onChangeText={setPin}
-              keyboardType="number-pad"
-              placeholderTextColor={colors.textLight}
-            />
-          )}
-          
-          {paymentMethod === 'Visa/Mastercard' && (
-            <View>
-              <TextInput
-                placeholder="Card Number *"
-                style={styles.input}
-                keyboardType="number-pad"
-                value={cardNumber}
-                onChangeText={setCardNumber}
-                placeholderTextColor={colors.textLight}
-              />
-              <View style={styles.cardInputRow}>
-                <TextInput
-                  placeholder="MM/YY *"
-                  style={[styles.input, {flex: 1, marginRight: 10}]}
-                  keyboardType="number-pad"
-                  value={cardExpiry}
-                  onChangeText={setCardExpiry}
-                  placeholderTextColor={colors.textLight}
-                />
-                <TextInput
-                  placeholder="CVV *"
-                  style={[styles.input, {flex: 1}]}
-                  secureTextEntry
-                  keyboardType="number-pad"
-                  value={cardCVV}
-                  onChangeText={setCardCVV}
-                  placeholderTextColor={colors.textLight}
-                />
-              </View>
-            </View>
-          )}
+          {/* Payment info note */}
+          <View style={styles.paymentNote}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.textLight} />
+            <Text style={styles.paymentNoteText}>
+              {paymentMethod === 'Cash on Delivery' 
+                ? 'Pay when your items are delivered'
+                : 'Secure payment link will be provided after booking confirmation'
+              }
+            </Text>
+          </View>
         </View>
 
         {/* Confirm Button */}
@@ -978,5 +958,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+    paymentNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f8ff',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  paymentNoteText: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginLeft: 8,
+    flex: 1,
   },
 });

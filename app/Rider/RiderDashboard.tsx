@@ -65,13 +65,7 @@ export default function RiderDashboard() {
 
       // Disable back navigation unless logout
       const onBackPress = () => {
-        Alert.alert(
-          'Hold on!',
-          'Please use the logout button to exit.',
-          [{ text: 'OK', style: 'cancel' }],
-          { cancelable: true }
-        );
-        return true; // Prevent default behavior
+        return true;
       };
 
       checkAuth();

@@ -19,10 +19,8 @@ export default function CompletedOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-      const baseURL = Platform.OS === 'android' 
-    ? 'https://freshness-eakm.onrender.com/api' 
-    : 'http://192.168.1.67:5000/api';
-  
+      const baseURL = 'https://freshness-eakm.onrender.com/api';
+
   const fetchCompletedOrders = async () => {
     try {
       const storedLocation = await AsyncStorage.getItem('userLocation');

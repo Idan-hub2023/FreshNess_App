@@ -41,9 +41,7 @@ export default function UsersScreen({ navigation }: any) {
 
   const router = useRouter();
 
-      const API_BASE_URL = Platform.OS === 'android' 
-    ? 'https://freshness-eakm.onrender.com/api' 
-    : 'http://192.168.1.67:5000/api';
+      const API_BASE_URL = 'https://freshness-eakm.onrender.com/api';
   
   const fetchUsers = async () => {
     try {

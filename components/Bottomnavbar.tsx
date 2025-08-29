@@ -1,153 +1,130 @@
-// components/BottomNavBar.js
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import {
-  Dimensions,
-  Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import colors from '../constants/Colors'; // ✅ make sure this path is correct
-const { width: screenWidth } = Dimensions.get('window');
+import colors from '../constants/Colors';
 
-export default function BottomNavBar({ currentRoute = 'Home' }) {
-
+const BottomNavBar = ({ currentRoute = 'Home' }) => {
   const router = useRouter();
+  const [profile, setProfile] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadProfileImage = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem('user');
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          if (parsed.profile) {
+            setProfile(parsed.profile);
+          }
+        }
+      } catch (error) {
+        console.log('Error loading profile image:', error);
+      }
+    };
+
+    loadProfileImage();
+  }, []);
+
   const navigationItems = [
     {
       id: 'home',
       route: 'Home',
-      icon: 'home',
-      iconOutline: 'home-outline',
+      icon: 'home-outline',
       label: 'Home',
+      onPress: () => router.push('/customer/home'),
     },
     {
       id: 'book',
       route: 'Book',
-      icon: 'calendar',
-      iconOutline: 'calendar-outline',
+      icon: 'calendar-outline',
       label: 'Book',
-       onPress: () => router.push('/customer/Screens/Book')
+      onPress: () => router.push('/customer/Screens/Book'),
     },
     {
       id: 'orders',
       route: 'Orders',
-      icon: 'clipboard',
-      iconOutline: 'clipboard-outline',
+      icon: 'clipboard-outline',
       label: 'Orders',
-      onPress: () => router.push('/customer/Screens/Orders')
+      onPress: () => router.push('/customer/Screens/Orders'),
     },
     {
       id: 'track',
       route: 'Track',
-      icon: 'location',
-      iconOutline: 'location-outline',
+      icon: 'location-outline',
       label: 'Track',
-      onPress: () => router.push('/customer/Screens/Track')
+      onPress: () => router.push('/customer/Screens/Track'),
     },
     {
       id: 'profile',
       route: 'Profile',
-      icon: 'person',
-      iconOutline: 'person-outline',
+      icon: 'person-outline',
       label: 'Profile',
-      onPress: () => router.push('/Setting')
-
-    }
+      onPress: () => router.push('/Setting'),
+      isProfile: true, // special case for profile image
+    },
   ];
-
 
   const renderNavItem = (item) => {
     const isActive = currentRoute === item.route;
-    const iconName = isActive ? item.icon : item.iconOutline;
     const iconColor = isActive ? colors.primary : colors.textLight;
     const textColor = isActive ? colors.primary : colors.textLight;
 
     return (
       <TouchableOpacity
         key={item.id}
-        style={[styles.navItem, isActive && styles.activeNavItem]}
+        style={styles.navItem}
         onPress={item.onPress}
         activeOpacity={0.7}
       >
         <View style={styles.iconContainer}>
-          <Icon name={iconName} size={24} color={iconColor} />
-          {item.badge && item.badge > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
-                {item.badge > 99 ? '99+' : item.badge}
-              </Text>
-            </View>
+          {item.isProfile && profile ? (
+            <Image source={{ uri: profile }} style={styles.profileImage} />
+          ) : (
+            <Icon name={item.icon} size={26} color={iconColor} />
           )}
-          {isActive && <View style={styles.activeIndicator} />}
         </View>
-        <Text style={[styles.navLabel, { color: textColor }]}>
-          {item.label}
-        </Text>
+        <Text style={[styles.navLabel, { color: textColor }]}>{item.label}</Text>
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.navBar}>
-          {navigationItems.map(renderNavItem)}
-        </View>
-      </View>
-    </SafeAreaView>
+    <View style={styles.container}>
+      {navigationItems.map(renderNavItem)}
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: colors.background,
-  },
   container: {
-    backgroundColor: colors.background,
-    shadowOffset: { width: 0, height: -3 },
-  },
-  navBar: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: Platform.OS === 'ios' ? 16 : 10,
+    paddingVertical: 10,
+    backgroundColor: colors.background,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 12,
-    minWidth: screenWidth / 6,
-    position: 'relative',
-  },
-  activeNavItem: {
-    backgroundColor: colors.lightBg,
-    transform: [{ scale: 1.05 }],
   },
   iconContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    bottom: -10,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.primary,
+    marginBottom: 2,
   },
   navLabel: {
     fontSize: 12,
     fontWeight: '500',
     textAlign: 'center',
   },
+  profileImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
 });
+
+export default BottomNavBar;

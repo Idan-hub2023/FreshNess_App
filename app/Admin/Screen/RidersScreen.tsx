@@ -32,9 +32,7 @@ type Rider = {
   isActive?: boolean;
 };
 
-const API_URL = Platform.OS === 'android' 
-  ? 'https://freshness-eakm.onrender.com/api/rider' 
-  : 'http://192.168.1.67:5000/api/rider';
+const API_URL = 'https://freshness-eakm.onrender.com/api/rider';
 
 const api = axios.create({
   baseURL: API_URL,

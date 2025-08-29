@@ -18,9 +18,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 const { width } = Dimensions.get('window');
-    const baseURL = Platform.OS === 'android' 
-  ? 'https://freshness-eakm.onrender.com/api' 
-  : 'http://192.168.1.67:5000/api';
+    const baseURL = 'https://freshness-eakm.onrender.com/api';
 
 export default function OrderHistory() {
   const [activeFilter, setActiveFilter] = useState('All Order');

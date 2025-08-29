@@ -71,7 +71,9 @@ const ReportDashboard = () => {
   };
 
   const calculateStatistics = (bookingsData) => {
-    const earnings = bookingsData.reduce((sum, booking) => sum + booking.totalAmount, 0);
+    const earnings = bookingsData
+    .filter(b => b.status === 'completed')
+    .reduce((sum, booking) => sum + booking.totalAmount, 0);
     const completed = bookingsData.filter(b => b.status === 'completed').length;
     const pending = bookingsData.filter(b => b.status === 'pending').length;
     const cancelled = bookingsData.filter(b => b.status === 'cancelled').length;

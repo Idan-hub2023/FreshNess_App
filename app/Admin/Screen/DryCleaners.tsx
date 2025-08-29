@@ -34,9 +34,7 @@ type Admin = {
   createdAt: string;
 };
 
-const API_URL = Platform.OS === 'android' 
-  ? 'https://freshness-eakm.onrender.com/api' 
-  : 'http://192.168.1.67:5000/api/rider';
+const API_URL = 'https://freshness-eakm.onrender.com/api';
 
 const AdminDashboard = () => {
   const [dryCleaners, setDryCleaners] = useState<DryCleaner[]>([]);

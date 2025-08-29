@@ -17,9 +17,7 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE_URL = Platform.OS === 'android' 
-  ? 'https://freshness-eakm.onrender.com/api' 
-  : 'http://192.168.1.67:5000/api';
+const API_BASE_URL = 'https://freshness-eakm.onrender.com/api';
 
 // Set Mapbox access token
 MapboxGL.setAccessToken('pk.eyJ1IjoiaXJhaG96YSIsImEiOiJjbWUya3ZzZWcwbW8xMmtyMmM1bGFwMW8yIn0.9WHhqP1CMroXatCoO1MwHw');
@@ -624,7 +622,7 @@ export default function NavigationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginBlockStart: 5,
+    marginBlockStart: 2,
     backgroundColor: '#f8f9fa',
   },
   loadingContainer: {

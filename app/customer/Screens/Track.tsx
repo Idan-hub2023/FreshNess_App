@@ -19,25 +19,21 @@ const statusSteps = [
 const statusIcons = ['📦', '🚗', '🛍️', '🧼', '🔍', '🚚', '✅'];
 
 const mapStatusToIndex = (status) => {
-  // First normalize the status to lowercase
   const normalizedStatus = status?.toLowerCase() || '';
 
-  // Map rider status to user tracking steps
   const riderStatusMapping = {
-    'pending': 1,       // 'pending' in rider -> 'Driver Assigned'
-    'picked_up': 2,     // 'picked_up' in rider -> 'Picked Up'
-    'processing': 3,    // 'processing' in rider -> 'In Process'
-    'returning': 4,     // 'returning' in rider -> 'Quality Check'
-    'delivered': 5,     // 'delivered' in rider -> 'Out for Delivery'
-    'completed': 6      // 'completed' in rider -> 'Delivered'
+    'pending': 1,
+    'picked_up': 2,
+    'processing': 3,
+    'returning': 4,
+    'delivered': 5,
+    'completed': 6
   };
 
-  // Check if it's a rider status first
   if (riderStatusMapping.hasOwnProperty(normalizedStatus)) {
     return riderStatusMapping[normalizedStatus];
   }
 
-  // Fall back to original user status mapping
   switch(normalizedStatus) {
     case 'pending': return 0;
     case 'driver assigned': return 1;
@@ -58,10 +54,8 @@ const OrderTrackingPage = () => {
   const [error, setError] = useState(null);
   const { width } = Dimensions.get('window');
 
-  const baseURL = Platform.OS === 'android' 
-    ? 'https://freshness-eakm.onrender.com/api' 
-    : 'http://192.168.1.67:5000/api';
-  
+  const baseURL = 'https://freshness-eakm.onrender.com/api';
+
   const router = useRouter();
 
   useEffect(() => {
@@ -90,201 +84,402 @@ const OrderTrackingPage = () => {
 
   const renderOrder = ({ item: order }) => {
     const currentStatus = mapStatusToIndex(order.payment?.status || order.status);
+    const pickupDate = new Date(order.pickupDate);
+    const formattedDate = pickupDate.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
 
     return (
-      <View>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-
+      <View style={styles.container}>
         <View style={styles.orderCard}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Order ID: {order.bookingCode || 'bookingCode'}</Text>
-            <Text style={styles.orderDate}>Pickup: {new Date(order.pickupDate).toLocaleDateString()}</Text>
+          {/* Booking Code Highlight */}
+          <View style={styles.bookingCodeContainer}>
+            <View style={styles.bookingCodeBadge}>
+              <Text style={styles.bookingCodeLabel}>Order ID</Text>
+              <Text style={styles.bookingCodeText}>#{order.bookingCode || 'N/A'}</Text>
+            </View>
+            <View style={styles.dateContainer}>
+              <Icon name="schedule" size={16} color={colors.textLight} />
+              <Text style={styles.orderDate}>{formattedDate}</Text>
+            </View>
           </View>
 
+          {/* Customer Info */}
+          <View style={styles.customerInfoContainer}>
+            <View style={styles.customerRow}>
+              <Icon name="person" size={18} color={colors.accent} />
+              <Text style={styles.customerName}>{order.customerName || 'Customer'}</Text>
+            </View>
+            <View style={styles.customerRow}>
+              <Icon name="phone" size={18} color={colors.accent} />
+              <Text style={styles.phoneNumber}>{order.phoneNumber || 'N/A'}</Text>
+            </View>
+            <View style={styles.customerRow}>
+              <Icon name="access-time" size={18} color={colors.accent} />
+              <Text style={styles.deliveryOption}>{order.deliveryOption || 'Standard'}</Text>
+            </View>
+          </View>
+
+          {/* Timeline */}
           <View style={styles.timelineContainer}>
+            <Text style={styles.sectionTitle}>Order Status</Text>
             {statusSteps.map((step, index) => (
               <View key={index} style={styles.timelineStep}>
-                <View style={[styles.stepIconContainer, index <= currentStatus && styles.activeStepIcon]}>
-                  <Text style={styles.stepIcon}>{statusIcons[index]}</Text>
+                <View style={styles.timelineLeft}>
+                  <View style={[styles.stepIconContainer, index <= currentStatus && styles.activeStepIcon]}>
+                    <Text style={[styles.stepIcon, index <= currentStatus && styles.activeStepIconText]}>
+                      {statusIcons[index]}
+                    </Text>
+                  </View>
+                  {index < statusSteps.length - 1 && (
+                    <View style={[styles.connectorLine, index < currentStatus && styles.activeConnector]} />
+                  )}
                 </View>
-                <View style={styles.stepTextContainer}>
+                <View style={styles.stepContent}>
                   <Text style={[styles.stepTitle, index <= currentStatus && styles.activeStepTitle]}>
                     {step}
                   </Text>
                   {index <= currentStatus && (
                     <Text style={styles.stepTime}>
-                      {index === currentStatus ? 'In progress' : 'Completed'}
+                      {index === currentStatus ? '🔄 In progress' : '✅ Completed'}
                     </Text>
                   )}
                 </View>
-                {index < statusSteps.length - 1 && (
-                  <View style={[styles.connectorLine, index < currentStatus && styles.activeConnector]} />
-                )}
               </View>
             ))}
           </View>
 
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Instructions:</Text>
-            <Text style={styles.infoValue}>{order.instructions || 'None'}</Text>
+          {/* Order Details */}
+          <View style={styles.detailsContainer}>
+            <Text style={styles.sectionTitle}>Order Details</Text>
+            
+            {/* Clothing Items */}
+            <View style={styles.itemsContainer}>
+              <Text style={styles.detailLabel}>Items:</Text>
+              {order.clothingItems?.map((item, index) => (
+                <View key={index} style={styles.itemRow}>
+                  <Text style={styles.itemName}>{item.name} x{item.quantity}</Text>
+                  <Text style={styles.itemPrice}>RWF {item.price?.toLocaleString()}</Text>
+                </View>
+              ))}
+            </View>
 
-            <Text style={styles.infoLabel}>Delivery Address:</Text>
-            <Text style={styles.infoValue}>{order.location?.address || order.address || 'No address provided'}</Text>
+            {/* Service Type */}
+            <View style={styles.detailRow}>
+              <Icon name="local-laundry-service" size={18} color={colors.accent} />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Service Type</Text>
+                <Text style={styles.detailValue}>{order.serviceType || 'N/A'}</Text>
+              </View>
+            </View>
 
-            <Text style={styles.infoLabel}>Service Type:</Text>
-            <Text style={styles.infoValue}>{order.serviceType || 'N/A'}</Text>
+            {/* Address */}
+            <View style={styles.detailRow}>
+              <Icon name="location-on" size={18} color={colors.accent} />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Delivery Address</Text>
+                <Text style={styles.detailValue}>
+                  {order.location?.address || order.address || 'No address provided'}
+                </Text>
+              </View>
+            </View>
 
-            <Text style={styles.infoLabel}>Payment Method:</Text>
-            <Text style={styles.infoValue}>{order.payment?.method || 'N/A'}</Text>
+            {/* Payment Info */}
+            <View style={styles.detailRow}>
+              <Icon name="payment" size={18} color={colors.accent} />
+              <View style={styles.detailContent}>
+                <Text style={styles.detailLabel}>Payment Method</Text>
+                <Text style={styles.detailValue}>{order.payment?.method || 'N/A'}</Text>
+              </View>
+            </View>
 
-            <Text style={styles.infoLabel}>Total Amount:</Text>
-            <Text style={styles.infoValue}>
-              {order.totalAmount ? `RWF ${order.totalAmount}` : 'N/A'}
-            </Text>
+            {/* Instructions */}
+            {order.instructions && (
+              <View style={styles.detailRow}>
+                <Icon name="note" size={18} color={colors.accent} />
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Special Instructions</Text>
+                  <Text style={styles.detailValue}>{order.instructions}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Total Amount */}
+            <View style={styles.totalContainer}>
+              <Text style={styles.totalLabel}>Total Amount</Text>
+              <Text style={styles.totalAmount}>
+                RWF {order.totalAmount?.toLocaleString() || '0'}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
     );
   };
 
-  return (
+return (
+  <View style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
+    {/* Header - ONCE */}
+    <View style={styles.headerContainer}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Icon name="arrow-back" size={24} color="#fff" />
+      </TouchableOpacity>
+      <Text style={styles.pageTitle}>Order Tracking</Text>
+    </View>
+
+    {/* Orders List */}
     <FlatList
       data={orders}
       keyExtractor={item => item._id}
       renderItem={renderOrder}
-      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.listContainer}
     />
-  );
+  </View>
+);
+
 };
 
 const styles = StyleSheet.create({
+  listContainer: {
+    backgroundColor: '#f8f9fa',
+    minHeight: '100%',
+  },
   container: {
-    padding: 20,
-    backgroundColor: 'white',
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
-  orderCard: {
-    marginTop: 50,
-    marginBottom: 30,
-    borderRadius: 12,
-    backgroundColor: colors.background,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  header: {
-    marginBottom: 15,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textDark,
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: colors.accent || '#007bff',
   },
   backButton: {
-    position: 'absolute',
-    left: 1,
-    top: 0,
-    padding: 10,
-    zIndex: 10,
-    backgroundColor: colors.accent,
-    borderRadius: 20,
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 15,
+  },
+  pageTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  orderCard: {
+    margin: 20,
+    borderRadius: 16,
+    backgroundColor: '#fff',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+  bookingCodeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.accent || '#007bff',
+    padding: 20,
+  },
+  bookingCodeBadge: {
+    flex: 1,
+  },
+  bookingCodeLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  bookingCodeText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 1,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   orderDate: {
     fontSize: 14,
-    color: colors.textLight,
-    marginTop: 3,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginLeft: 6,
+  },
+  customerInfoContainer: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  customerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  customerName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textDark || '#333',
+    marginLeft: 10,
+  },
+  phoneNumber: {
+    fontSize: 14,
+    color: colors.textLight || '#666',
+    marginLeft: 10,
+  },
+  deliveryOption: {
+    fontSize: 14,
+    color: colors.textLight || '#666',
+    marginLeft: 10,
   },
   timelineContainer: {
-    marginBottom: 15,
-    paddingLeft: 10,
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textDark || '#333',
+    marginBottom: 16,
   },
   timelineStep: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-    position: 'relative',
+    marginBottom: 12,
+  },
+  timelineLeft: {
+    alignItems: 'center',
+    marginRight: 12,
   },
   stepIconContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.background,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f8f9fa',
+    borderWidth: 2,
+    borderColor: '#e9ecef',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.textLight,
-    marginRight: 10,
-    zIndex: 2,
   },
   activeStepIcon: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    backgroundColor: colors.accent || '#007bff',
+    borderColor: colors.accent || '#007bff',
   },
   stepIcon: {
-    fontSize: 14,
+    fontSize: 16,
   },
-  stepTextContainer: {
+  activeStepIconText: {
+    fontSize: 16,
+  },
+  connectorLine: {
+    width: 2,
+    height: 24,
+    backgroundColor: '#e9ecef',
+    marginTop: 4,
+  },
+  activeConnector: {
+    backgroundColor: colors.accent || '#007bff',
+  },
+  stepContent: {
     flex: 1,
-    paddingTop: 3,
+    paddingTop: 6,
   },
   stepTitle: {
     fontSize: 14,
-    color: colors.textLight,
+    color: colors.textLight || '#666',
     marginBottom: 2,
   },
   activeStepTitle: {
-    color: colors.textDark,
+    color: colors.textDark || '#333',
     fontWeight: '600',
   },
   stepTime: {
-    fontSize: 10,
-    color: colors.textLight,
+    fontSize: 12,
+    color: colors.accent || '#007bff',
+    fontWeight: '500',
   },
-  connectorLine: {
-    position: 'absolute',
-    left: 15,
-    top: 30,
-    height: '100%',
-    width: 1,
-    backgroundColor: colors.textLight,
-    zIndex: 1,
+  detailsContainer: {
+    padding: 20,
   },
-  activeConnector: {
-    backgroundColor: colors.accent,
+  itemsContainer: {
+    marginBottom: 16,
   },
-  infoCard: {
+  itemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  itemName: {
+    fontSize: 14,
+    color: colors.textDark || '#333',
+    fontWeight: '500',
+  },
+  itemPrice: {
+    fontSize: 14,
+    color: colors.accent || '#007bff',
+    fontWeight: '600',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  detailContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: colors.textLight || '#666',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: colors.textDark || '#333',
+    fontWeight: '500',
+  },
+  totalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.accent || '#007bff',
+    padding: 16,
+    borderRadius: 12,
     marginTop: 10,
   },
-  infoLabel: {
-    fontSize: 13,
-    color: colors.textLight,
-    marginTop: 5,
-  },
-  infoValue: {
-    fontSize: 15,
+  totalLabel: {
+    fontSize: 16,
+    color: '#fff',
     fontWeight: '600',
-    color: colors.textDark,
+  },
+  totalAmount: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: '800',
   },
   error: {
     color: 'red',
     textAlign: 'center',
     marginTop: 20,
+    fontSize: 16,
   },
 });
 

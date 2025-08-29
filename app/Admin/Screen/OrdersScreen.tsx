@@ -1,14 +1,15 @@
 import colors from '@/constants/Colors';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Modal,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -32,6 +33,7 @@ type Order = {
   totalAmount: number;
   status: string;
   createdAt: string;
+  bookingCode?: string;
   payment: {
     method: string;
     details: {
@@ -40,10 +42,7 @@ type Order = {
   };
 };
 
-
-    const API_URL = Platform.OS === 'android' 
-  ? 'https://freshness-eakm.onrender.com/api/orders' 
-  : 'http://192.168.1.67:5000/api/orders';
+const API_URL = 'https://freshness-eakm.onrender.com/api/orders';
 
 const OrdersScreen = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -51,6 +50,8 @@ const OrdersScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('all');
 
   const fetchOrders = async () => {
     try {
@@ -79,6 +80,51 @@ const OrdersScreen = () => {
   const onRefresh = () => {
     fetchOrders();
   };
+
+  // Filter and search orders
+  const filteredOrders = useMemo(() => {
+    let filtered = orders;
+
+    // Filter by status
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(order => order.status === selectedStatus);
+    }
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(order => 
+        order.customerName.toLowerCase().includes(query) ||
+        order.phoneNumber.includes(query) ||
+        order.serviceType.toLowerCase().includes(query) ||
+        order.address.toLowerCase().includes(query) ||
+        (order.bookingCode && order.bookingCode.toLowerCase().includes(query)) ||
+        order._id.includes(query)
+      );
+    }
+
+    // Sort by creation date (newest first)
+    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [orders, searchQuery, selectedStatus]);
+
+  // Get status counts for filter tabs
+  const statusCounts = useMemo(() => {
+    const counts = {
+      all: orders.length,
+      pending: 0,
+      'in-progress': 0,
+      picked: 0,
+      completed: 0
+    };
+
+    orders.forEach(order => {
+      if (counts.hasOwnProperty(order.status)) {
+        counts[order.status as keyof typeof counts]++;
+      }
+    });
+
+    return counts;
+  }, [orders]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -147,6 +193,54 @@ const OrdersScreen = () => {
     setModalVisible(true);
   };
 
+  const renderStatusFilter = () => {
+    const statusOptions = [
+      { key: 'all', label: 'All', count: statusCounts.all },
+      { key: 'pending', label: 'Pending', count: statusCounts.pending },
+      { key: 'in-progress', label: 'In Progress', count: statusCounts['in-progress'] },
+      { key: 'picked', label: 'Picked', count: statusCounts.picked },
+      { key: 'completed', label: 'Completed', count: statusCounts.completed },
+    ];
+
+    return (
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterContainer}
+        contentContainerStyle={styles.filterContent}
+      >
+        {statusOptions.map((option) => (
+          <TouchableOpacity
+            key={option.key}
+            style={[
+              styles.filterTab,
+              selectedStatus === option.key && styles.activeFilterTab
+            ]}
+            onPress={() => setSelectedStatus(option.key)}
+          >
+            <Text style={[
+              styles.filterTabText,
+              selectedStatus === option.key && styles.activeFilterTabText
+            ]}>
+              {option.label}
+            </Text>
+            <View style={[
+              styles.countBadge,
+              selectedStatus === option.key && styles.activeCountBadge
+            ]}>
+              <Text style={[
+                styles.countText,
+                selectedStatus === option.key && styles.activeCountText
+              ]}>
+                {option.count}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -164,38 +258,45 @@ const OrdersScreen = () => {
     >
       {/* Header Row */}
       <View style={styles.cardHeader}>
-        <Text style={styles.orderId}>#{item._id.slice(-6).toUpperCase()}</Text>
+        <Text style={styles.orderId}>
+          #{item.bookingCode || item._id.slice(-6).toUpperCase()}
+        </Text>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
           <Text style={styles.statusIcon}>{getStatusIcon(item.status)}</Text>
           <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
         </View>
       </View>
 
-      {/* Service Type */}
-      <Text style={styles.serviceType}>{item.serviceType}</Text>
+      {/* Customer and Service */}
+      <View style={styles.mainInfo}>
+        <Text style={styles.customerName}>{item.customerName}</Text>
+        <Text style={styles.serviceType}>{item.serviceType}</Text>
+      </View>
 
       {/* Price */}
       <Text style={styles.price}>{item.totalAmount.toLocaleString()} RWF</Text>
 
-      {/* Details Grid */}
-      <View style={styles.detailsGrid}>
+      {/* Quick Details */}
+      <View style={styles.quickDetails}>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>👤 Customer</Text>
-          <Text style={styles.detailValue}>{item.customerName}</Text>
+          <Text style={styles.detailIcon}>📞</Text>
+          <Text style={styles.detailText}>{item.phoneNumber}</Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>📞 Phone</Text>
-          <Text style={styles.detailValue}>{item.phoneNumber}</Text>
+          <Text style={styles.detailIcon}>📍</Text>
+          <Text style={styles.detailText} numberOfLines={1}>{item.address}</Text>
         </View>
         <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>📍 Address</Text>
-          <Text style={styles.detailValue}>{item.address}</Text>
+          <Text style={styles.detailIcon}>📅</Text>
+          <Text style={styles.detailText}>{formatDate(item.createdAt)}</Text>
         </View>
       </View>
 
-      {/* Footer */}
+      {/* Items count */}
       <View style={styles.cardFooter}>
-        <Text style={styles.dateText}>Created: {formatDate(item.createdAt)}</Text>
+        <Text style={styles.itemsCount}>
+          {item.clothingItems.length} item{item.clothingItems.length !== 1 ? 's' : ''}
+        </Text>
         <TouchableOpacity 
           style={styles.viewButton}
           onPress={() => viewOrderDetails(item)}
@@ -209,8 +310,26 @@ const OrdersScreen = () => {
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyText}>📦</Text>
-      <Text style={styles.emptyTitle}>No Orders Found</Text>
-      <Text style={styles.emptySubtitle}>Orders will appear here once they are created</Text>
+      <Text style={styles.emptyTitle}>
+        {searchQuery || selectedStatus !== 'all' ? 'No Matching Orders' : 'No Orders Found'}
+      </Text>
+      <Text style={styles.emptySubtitle}>
+        {searchQuery || selectedStatus !== 'all' 
+          ? 'Try adjusting your search or filter criteria'
+          : 'Orders will appear here once they are created'
+        }
+      </Text>
+      {(searchQuery || selectedStatus !== 'all') && (
+        <TouchableOpacity 
+          style={styles.clearFiltersButton}
+          onPress={() => {
+            setSearchQuery('');
+            setSelectedStatus('all');
+          }}
+        >
+          <Text style={styles.clearFiltersText}>Clear Filters</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -219,12 +338,37 @@ const OrdersScreen = () => {
       {/* Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.header}>Orders Management</Text>
-        <Text style={styles.subtitle}>{orders.length} total orders</Text>
+        <Text style={styles.subtitle}>
+          {filteredOrders.length} of {orders.length} orders
+        </Text>
       </View>
+
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search by customer, phone, service, or order ID..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor={colors.textLight}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity 
+            style={styles.clearButton}
+            onPress={() => setSearchQuery('')}
+          >
+            <Text style={styles.clearButtonText}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Status Filter */}
+      {renderStatusFilter()}
 
       {/* Orders List */}
       <FlatList
-        data={orders}
+        data={filteredOrders}
         keyExtractor={(item) => item._id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
@@ -264,7 +408,9 @@ const OrdersScreen = () => {
               <Text style={styles.sectionTitle}>Order Summary</Text>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Order ID:</Text>
-                <Text style={styles.detailValue}>#{selectedOrder._id.slice(-6).toUpperCase()}</Text>
+                <Text style={styles.detailValue}>
+                  #{selectedOrder.bookingCode || selectedOrder._id.slice(-6).toUpperCase()}
+                </Text>
               </View>
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Status:</Text>
@@ -364,7 +510,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   headerContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   header: {
     fontSize: 28,
@@ -376,19 +522,106 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textLight,
   },
+  // Search Styles
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.textDark,
+    paddingVertical: 0,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    color: colors.textLight,
+  },
+  // Filter Styles
+  filterContainer: {
+    marginBottom: 6,
+    height: 60,
+  },
+  filterContent: {
+    paddingHorizontal: 4,
+  },
+  filterTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  activeFilterTab: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textDark,
+    marginRight: 6,
+  },
+  activeFilterTabText: {
+    color: 'white',
+  },
+  countBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  activeCountBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  countText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textDark,
+  },
+  activeCountText: {
+    color: 'white',
+  },
   list: {
-    paddingBottom: 100,
+    paddingBottom: 10,
+    paddingVertical: 16,
   },
   card: {
     backgroundColor: 'white',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 12,
+    marginTop: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    elevation: 3,
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
@@ -399,77 +632,83 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   orderId: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: colors.textDark,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
     gap: 4,
   },
   statusIcon: {
-    fontSize: 12,
+    fontSize: 10,
     color: 'white',
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: 'white',
   },
-  serviceType: {
-    fontSize: 20,
+  mainInfo: {
+    marginBottom: 8,
+  },
+  customerName: {
+    fontSize: 18,
     fontWeight: '600',
+    color: colors.textDark,
+    marginBottom: 2,
+  },
+  serviceType: {
+    fontSize: 14,
+    fontWeight: '500',
     color: colors.primary,
     marginBottom: 8,
   },
   price: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#059669',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  detailsGrid: {
-    marginBottom: 16,
-    gap: 12,
+  quickDetails: {
+    gap: 6,
+    marginBottom: 12,
   },
   detailItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '500',
+  detailIcon: {
+    fontSize: 12,
+    marginRight: 8,
+    width: 16,
+  },
+  detailText: {
+    fontSize: 13,
     color: colors.textLight,
     flex: 1,
-  },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textDark,
-    flex: 2,
-    textAlign: 'right',
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
-  dateText: {
+  itemsCount: {
     fontSize: 12,
     color: colors.textLight,
+    fontWeight: '500',
   },
   viewButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   viewButtonText: {
@@ -492,7 +731,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
+    paddingVertical: 150,
+    paddingBottom: 120,
   },
   emptyText: {
     fontSize: 48,
@@ -503,13 +743,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: colors.textDark,
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 16,
     color: colors.textLight,
     textAlign: 'center',
+    lineHeight: 22,
   },
-  // Modal Styles
+  clearFiltersButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  clearFiltersText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Modal Styles (keeping existing styles)
   modalContainer: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -554,6 +808,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
+    alignItems: 'center',
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textLight,
+    flex: 1,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textDark,
+    flex: 2,
+    textAlign: 'right',
   },
   priceText: {
     color: '#059669',

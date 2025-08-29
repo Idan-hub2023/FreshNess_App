@@ -22,10 +22,8 @@ export default function RegisterDryCleanerScreen() {
   const [longitude, setLongitude] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-        const API_URL = Platform.OS === 'android' 
-    ? 'https://freshness-eakm.onrender.com' 
-    : 'http://192.168.1.67:5000';
-  
+        const API_URL = 'https://freshness-eakm.onrender.com';
+
   const handleGetLocation = async () => {
     setIsLoading(true);
     try {

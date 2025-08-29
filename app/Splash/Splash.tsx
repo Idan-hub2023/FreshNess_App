@@ -1,3 +1,4 @@
+// app/splash/splash.tsx
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
@@ -62,15 +63,14 @@ export default function SplashScreen() {
     );
 
     // Start pulse after initial animations
-    setTimeout(() => pulseAnimation.start(), 1000);
-
-    // Navigate after 3 seconds
-    const timer = setTimeout(() => {
-      router.replace('./auth/welcome');
+    const pulseTimer = setTimeout(() => pulseAnimation.start(), 1000);
+    const navigationTimer =  setTimeout(() => {
+      router.replace('../auth/welcome');
     }, 3000);
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(navigationTimer);
+      clearTimeout(pulseTimer);
       pulseAnimation.stop();
     };
   }, []);

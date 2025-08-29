@@ -106,12 +106,6 @@ export default function HomeScreen() {
       };
 
       const onBackPress = () => {
-        Alert.alert(
-          'Hold on!',
-          'Please use the logout button to exit.',
-          [{ text: 'OK', style: 'cancel' }],
-          { cancelable: true }
-        );
         return true;
       };
 
