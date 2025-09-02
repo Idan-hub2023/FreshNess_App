@@ -350,27 +350,6 @@ class NotificationService {
     }
   }
 
-  static async testNotification() {
-    Alert.alert('Test Notification', 'Choose test type:', [
-      {
-        text: 'Test New Order',
-        onPress: () => {
-          if (this.currentHandler) {
-            const testOrderId = `test_order_${Date.now()}`;
-            this.currentHandler(testOrderId);
-          }
-        },
-      },
-      {
-        text: 'Check Status',
-        onPress: async () => {
-          const status = await this.getStatus();
-          Alert.alert('Status', JSON.stringify(status, null, 2));
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  }
 
   static async getStatus() {
     const status = {

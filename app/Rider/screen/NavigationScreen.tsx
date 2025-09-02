@@ -12,9 +12,11 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  StatusBar
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 const API_BASE_URL = 'https://freshness-eakm.onrender.com/api';
@@ -99,7 +101,6 @@ export default function NavigationScreen() {
   // Set initial status based on order status
   useEffect(() => {
     if (orderObj?.status) {
-      // Map database status to local status
       const statusMapping = {
         'pending': 'navigating',
         'picked_up': 'pickup',
@@ -135,7 +136,6 @@ export default function NavigationScreen() {
     let phoneNumber = orderObj.phoneNumber.replace(/[^0-9+]/g, '');
     const hasPlusPrefix = phoneNumber.startsWith('+');
     
-    // If no international prefix, assume it's local format
     if (!hasPlusPrefix) {
       Alert.alert(
         'Phone Number Format',
@@ -144,7 +144,6 @@ export default function NavigationScreen() {
           {
             text: 'Add Country Code',
             onPress: () => {
-              // Prompt user to enter country code
               Alert.prompt(
                 'Enter Country Code',
                 'Please enter the country code (e.g., 1 for US, 44 for UK):',
@@ -178,7 +177,6 @@ export default function NavigationScreen() {
         ]
       );
     } else {
-      // Number already has international format
       initiateCall(phoneNumber);
     }
   };
@@ -278,10 +276,7 @@ export default function NavigationScreen() {
         onPress: async () => {
           setIsUpdatingStatus(true);
           try {
-            // Update status in database
             const updatedOrder = await updateOrderStatusInDB(dbStatus);
-            
-            // Update local state
             setOrderStatus(newStatus);
             
             if (newStatus === 'completed') {
@@ -289,7 +284,6 @@ export default function NavigationScreen() {
                 { text: 'OK', onPress: () => router.back() }
               ]);
             } else {
-              // Show success message for other status updates
               Alert.alert('Status Updated', 'Order status has been updated successfully.');
             }
           } catch (error) {
@@ -318,13 +312,13 @@ export default function NavigationScreen() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'navigating': return '#2196F3';
-      case 'pickup': return '#FF9800';
-      case 'delivery': return '#9C27B0';
-      case 'processing': return '#607D8B';
-      case 'returning': return '#4CAF50';
-      case 'completed': return '#22C55E';
-      default: return '#666';
+      case 'navigating': return '#1e40af'; // blue-700
+      case 'pickup': return '#2563eb'; // blue-600
+      case 'delivery': return '#3b82f6'; // blue-500
+      case 'processing': return '#60a5fa'; // blue-400
+      case 'returning': return '#2dd4bf'; // teal-400
+      case 'completed': return '#10b981'; // emerald-500
+      default: return '#6b7280';
     }
   };
 
@@ -365,7 +359,11 @@ export default function NavigationScreen() {
   if (!currentLocation) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading your location...</Text>
+        <View style={styles.loadingCard}>
+          <Icon name="location-searching" size={48} color="#3b82f6" />
+          <Text style={styles.loadingText}>Finding your location...</Text>
+          <Text style={styles.loadingSubtext}>Please wait while we get your GPS coordinates</Text>
+        </View>
       </View>
     );
   }
@@ -377,21 +375,50 @@ export default function NavigationScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with Order Info */}
-      <View style={styles.header}>
+      <StatusBar barStyle="light-content" backgroundColor="#1e40af" />
+      
+      {/* Enhanced Header with Gradient */}
+      <LinearGradient
+        colors={['#1e40af', '#2563eb', '#3b82f6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.header}
+      >
         <View style={styles.headerContent}>
-          <Text style={styles.customerName}>{orderObj.customerName || 'Customer'}</Text>
-          <Text style={styles.orderAmount}>RWF {orderObj.totalAmount?.toLocaleString() || '0'}</Text>
-          <View style={styles.statusContainer}>
-            <View style={[styles.statusDot, { backgroundColor: getStatusColor(orderStatus) }]} />
-            <Text style={styles.statusText}>{getStatusText(orderStatus)}</Text>
+          {/* Status Badge */}
+          <View style={styles.statusBadgeContainer}>
+            <View style={styles.statusBadge}>
+              <View style={[styles.statusDot, { backgroundColor: getStatusColor(orderStatus) }]} />
+              <Text style={styles.statusBadgeText}>{getStatusText(orderStatus)}</Text>
+            </View>
+            <View style={styles.orderIdBadge}>
+              <Text style={styles.orderIdText}>#{orderObj.bookingCode || 'N/A'}</Text>
+            </View>
           </View>
-          <Text style={styles.orderId}>Order ID: {orderObj.bookingCode || 'N/A'}</Text>
-          <Text style={styles.phoneNumber}>{orderObj.phoneNumber || 'No phone'}</Text>
-        </View>
-      </View>
 
-      {/* Mapbox Map Section */}
+          {/* Customer Info */}
+          <View style={styles.customerInfoContainer}>
+            <View style={styles.customerAvatarContainer}>
+              <Icon name="person" size={20} color="#bfdbfe" />
+            </View>
+            <View style={styles.customerDetails}>
+              <Text style={styles.customerName}>{orderObj.customerName || 'Customer'}</Text>
+              <Text style={styles.phoneNumber}>{orderObj.phoneNumber || 'No phone'}</Text>
+            </View>
+          </View>
+
+          {/* Amount */}
+          <View style={styles.amountContainer}>
+            <Icon name="account-balance-wallet" size={20} color="#bbf7d0" />
+            <View style={styles.amountDetails}>
+              <Text style={styles.amountLabel}>Total Amount</Text>
+              <Text style={styles.amountValue}>RWF {orderObj.totalAmount?.toLocaleString() || '0'}</Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* Enhanced Map Section */}
       <View style={styles.mapContainer}>
         <MapboxGL.MapView 
           style={styles.map}
@@ -422,7 +449,7 @@ export default function NavigationScreen() {
               coordinate={customerLocation}
             >
               <View style={styles.customerLocationMarker}>
-                <Icon name="location-on" size={30} color="#FF5722" />
+                <Icon name="location-on" size={30} color="#dc2626" />
               </View>
             </MapboxGL.PointAnnotation>
           )}
@@ -436,7 +463,7 @@ export default function NavigationScreen() {
               <MapboxGL.LineLayer
                 id="routeLine"
                 style={{
-                  lineColor: '#2196F3',
+                  lineColor: '#3b82f6',
                   lineWidth: 4,
                   lineOpacity: 0.8,
                 }}
@@ -444,176 +471,222 @@ export default function NavigationScreen() {
             </MapboxGL.ShapeSource>
           )}
 
-          {/* User location indicator */}
           <MapboxGL.UserLocation 
             visible={true}
             showsUserHeadingIndicator={true}
           />
         </MapboxGL.MapView>
+
+        {/* Floating Call Button */}
+        {orderStatus === 'navigating' && (
+          <TouchableOpacity
+            style={styles.floatingCallButton}
+            onPress={handleCallCustomer}
+          >
+            <Icon name="phone" size={24} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Order Details Section */}
-      <ScrollView style={styles.detailsScrollContainer}>
+      {/* Enhanced Content Section */}
+      <ScrollView style={styles.detailsScrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.detailsContainer}>
-          <Text style={styles.sectionTitle}>Order Details</Text>
-
-          <View style={styles.detailCard}>
-            <View style={styles.detailRow}>
-              <Icon name="location-on" size={20} color="#666" style={styles.detailIcon} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Delivery Address</Text>
-                <Text style={styles.detailText}>{orderObj.address || 'No address'}</Text>
-                {orderObj.location?.coordinates && (
-                  <Text style={styles.coordinatesText}>
-                    {orderObj.location.coordinates[1]?.toFixed(6)}, {orderObj.location.coordinates[0]?.toFixed(6)}
-                  </Text>
-                )}
-              </View>
+          {/* Order Details Card */}
+          <View style={styles.modernCard}>
+            <View style={styles.cardHeader}>
+              <Icon name="location-on" size={20} color="#3b82f6" />
+              <Text style={styles.cardTitle}>Order Details</Text>
             </View>
-
-            <View style={styles.detailRow}>
-              <Icon name="schedule" size={20} color="#666" style={styles.detailIcon} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Pickup Date & Time</Text>
-                <Text style={styles.detailText}>
-                  {new Date(orderObj.pickupDate).toLocaleDateString()} •{' '}
-                  {new Date(orderObj.pickupTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.detailRow}>
-              <Icon name="local-shipping" size={20} color="#666" style={styles.detailIcon} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Delivery Option</Text>
-                <Text style={styles.detailText}>{orderObj.deliveryOption || 'Standard'}</Text>
-              </View>
-            </View>
-
-            <View style={styles.detailRow}>
-              <Icon name="cleaning-services" size={20} color="#666" style={styles.detailIcon} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Service Type</Text>
-                <Text style={styles.detailText}>{orderObj.serviceType || 'Standard Service'}</Text>
-              </View>
-            </View>
-
-            {orderObj.instructions && (
-              <View style={styles.detailRow}>
-                <Icon name="info" size={20} color="#666" style={styles.detailIcon} />
-                <View style={styles.detailTextContainer}>
-                  <Text style={styles.detailLabel}>Special Instructions</Text>
-                  <Text style={styles.detailText}>{orderObj.instructions}</Text>
+            <View style={styles.cardContent}>
+              <View style={styles.modernDetailRow}>
+                <View style={styles.iconContainer}>
+                  <Icon name="location-on" size={16} color="#3b82f6" />
+                </View>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Delivery Address</Text>
+                  <Text style={styles.detailText}>{orderObj.address || 'No address'}</Text>
+                  {orderObj.location?.coordinates && (
+                    <Text style={styles.coordinatesText}>
+                      {orderObj.location.coordinates[1]?.toFixed(6)}, {orderObj.location.coordinates[0]?.toFixed(6)}
+                    </Text>
+                  )}
                 </View>
               </View>
-            )}
-          </View>
 
-          {/* Clothing Items Section */}
-          <View style={styles.itemsCard}>
-            <Text style={styles.sectionTitle}>Clothing Items ({orderObj.clothingItems?.length || 0})</Text>
-            {orderObj.clothingItems?.length > 0 ? (
-              orderObj.clothingItems.map((item, index) => (
-                <View key={index} style={styles.itemRow}>
-                  <Text style={styles.bullet}>•</Text>
-                  <View style={styles.itemDetails}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemQuantityPrice}>
-                      {item.quantity} × RWF {item.price?.toLocaleString()} = RWF {(item.quantity * item.price)?.toLocaleString()}
-                    </Text>
+              <View style={styles.modernDetailRow}>
+                <View style={styles.iconContainer}>
+                  <Icon name="schedule" size={16} color="#3b82f6" />
+                </View>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Pickup Date & Time</Text>
+                  <Text style={styles.detailText}>
+                    {new Date(orderObj.pickupDate).toLocaleDateString()} •{' '}
+                    {new Date(orderObj.pickupTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.modernDetailRow}>
+                <View style={styles.iconContainer}>
+                  <Icon name="local-shipping" size={16} color="#3b82f6" />
+                </View>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Service Type</Text>
+                  <Text style={styles.detailText}>{orderObj.serviceType || 'Standard Service'}</Text>
+                  <Text style={styles.deliveryOptionText}>{orderObj.deliveryOption || 'Standard'}</Text>
+                </View>
+              </View>
+
+              {orderObj.instructions && (
+                <View style={styles.modernDetailRow}>
+                  <View style={styles.iconContainer}>
+                    <Icon name="info" size={16} color="#3b82f6" />
+                  </View>
+                  <View style={styles.detailContent}>
+                    <Text style={styles.detailLabel}>Special Instructions</Text>
+                    <Text style={styles.detailText}>{orderObj.instructions}</Text>
                   </View>
                 </View>
-              ))
-            ) : (
-              <Text style={styles.noItemsText}>No items listed.</Text>
-            )}
-            <View style={styles.totalAmountContainer}>
-              <Text style={styles.totalAmountLabel}>Total Amount:</Text>
-              <Text style={styles.totalAmount}>RWF {orderObj.totalAmount?.toLocaleString() || '0'}</Text>
+              )}
             </View>
           </View>
 
-          {/* Payment Information */}
-          <View style={styles.paymentCard}>
-            <Text style={styles.sectionTitle}>Payment Information</Text>
-            <View style={styles.detailRow}>
-              <Icon name="payment" size={20} color="#666" style={styles.detailIcon} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Payment Method</Text>
-                <Text style={styles.detailText}>{orderObj.payment?.method || 'Unknown'}</Text>
+          {/* Clothing Items Card */}
+          <View style={styles.modernCard}>
+            <View style={styles.cardHeader}>
+              <Icon name="checkroom" size={20} color="#3b82f6" />
+              <Text style={styles.cardTitle}>Clothing Items</Text>
+              <View style={styles.itemCountBadge}>
+                <Text style={styles.itemCountText}>{orderObj.clothingItems?.length || 0}</Text>
               </View>
             </View>
-            
-            {orderObj.payment?.details?.phoneNumber && (
-              <View style={styles.detailRow}>
-                <Icon name="phone" size={20} color="#666" style={styles.detailIcon} />
-                <View style={styles.detailTextContainer}>
-                  <Text style={styles.detailLabel}>Payment Phone</Text>
-                  <Text style={styles.detailText}>{orderObj.payment.details.phoneNumber}</Text>
+            <View style={styles.cardContent}>
+              {orderObj.clothingItems?.length > 0 ? (
+                orderObj.clothingItems.map((item, index) => (
+                  <View key={index} style={styles.itemCard}>
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName}>{item.name}</Text>
+                      <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
+                    </View>
+                    <View style={styles.itemPricing}>
+                      <Text style={styles.itemTotal}>RWF {(item.quantity * item.price)?.toLocaleString()}</Text>
+                      <Text style={styles.itemPrice}>@ RWF {item.price?.toLocaleString()}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.noItemsContainer}>
+                  <Icon name="inventory" size={32} color="#cbd5e1" />
+                  <Text style={styles.noItemsText}>No items listed</Text>
                 </View>
+              )}
+              
+              <View style={styles.totalContainer}>
+                <Text style={styles.totalLabel}>Total Amount</Text>
+                <Text style={styles.totalAmount}>RWF {orderObj.totalAmount?.toLocaleString() || '0'}</Text>
               </View>
-            )}
-            
-            <View style={styles.detailRow}>
-              <Icon name="check-circle" size={20} color="#666" style={styles.detailIcon} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Payment Status</Text>
-                <Text style={[styles.detailText, { color: orderObj.status === 'completed' ? '#4CAF50' : '#FF5722' }]}>
-                  {orderObj.status === 'completed' ? 'Paid' : 'Pending'}
-                </Text>
+            </View>
+          </View>
+
+          {/* Payment Information Card */}
+          <View style={styles.modernCard}>
+            <View style={styles.cardHeader}>
+              <Icon name="payment" size={20} color="#3b82f6" />
+              <Text style={styles.cardTitle}>Payment Information</Text>
+            </View>
+            <View style={styles.cardContent}>
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Payment Method</Text>
+                <Text style={styles.paymentValue}>{orderObj.payment?.method || 'Unknown'}</Text>
+              </View>
+              
+              {orderObj.payment?.details?.phoneNumber && (
+                <View style={styles.paymentRow}>
+                  <Text style={styles.paymentLabel}>Phone Number</Text>
+                  <Text style={styles.paymentValue}>{orderObj.payment.details.phoneNumber}</Text>
+                </View>
+              )}
+              
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Payment Status</Text>
+                <View style={[
+                  styles.statusChip, 
+                  { backgroundColor: orderObj.status === 'completed' ? '#dcfce7' : '#fef3c7' }
+                ]}>
+                  <Text style={[
+                    styles.statusChipText,
+                    { color: orderObj.status === 'completed' ? '#166534' : '#92400e' }
+                  ]}>
+                    {orderObj.status === 'completed' ? 'Paid' : 'Pending'}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
 
           {/* Order Metadata */}
-          <View style={styles.metaCard}>
-            <Text style={styles.sectionTitle}>Order Information</Text>
-            <View style={styles.detailRow}>
-              <Icon name="calendar-today" size={20} color="#666" style={styles.detailIcon} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Created At</Text>
-                <Text style={styles.detailText}>
-                  {new Date(orderObj.createdAt).toLocaleString()}
-                </Text>
+          <View style={styles.modernCard}>
+            <View style={styles.cardHeader}>
+              <Icon name="info-outline" size={20} color="#3b82f6" />
+              <Text style={styles.cardTitle}>Order Information</Text>
+            </View>
+            <View style={styles.cardContent}>
+              <View style={styles.modernDetailRow}>
+                <View style={styles.iconContainer}>
+                  <Icon name="calendar-today" size={16} color="#3b82f6" />
+                </View>
+                <View style={styles.detailContent}>
+                  <Text style={styles.detailLabel}>Created At</Text>
+                  <Text style={styles.detailText}>
+                    {new Date(orderObj.createdAt).toLocaleString()}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* Action Buttons Section */}
+      {/* Enhanced Action Container */}
       <View style={styles.actionContainer}>
-        {orderStatus === 'navigating' && (
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleCallCustomer}
-            disabled={isUpdatingStatus}
-          >
-            <Icon name="phone" size={24} color="#4CAF50" />
-            <Text style={styles.secondaryButtonText}>Call Customer</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={[
-            styles.primaryButton, 
-            { 
-              backgroundColor: isUpdatingStatus ? '#ccc' : getStatusColor(orderStatus),
-              opacity: isUpdatingStatus ? 0.7 : 1
-            }
-          ]}
-          onPress={() => updateOrderStatus(nextAction.action)}
-          disabled={isUpdatingStatus}
+        <LinearGradient
+          colors={['#ffffff', '#f8fafc']}
+          style={styles.actionGradient}
         >
-          {isUpdatingStatus ? (
-            <Icon name="hourglass-empty" size={24} color="#fff" />
-          ) : (
-            <Icon name="check-circle" size={24} color="#fff" />
-          )}
-          <Text style={styles.primaryButtonText}>
-            {isUpdatingStatus ? 'Updating...' : nextAction.text}
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.actionButtons}>
+            {orderStatus === 'navigating' && (
+              <TouchableOpacity
+                style={styles.secondaryActionButton}
+                onPress={handleCallCustomer}
+                disabled={isUpdatingStatus}
+              >
+                <Icon name="phone" size={20} color="#3b82f6" />
+                <Text style={styles.secondaryButtonText}>Call Customer</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.primaryActionButton, 
+                { 
+                  backgroundColor: isUpdatingStatus ? '#cbd5e1' : getStatusColor(orderStatus),
+                  opacity: isUpdatingStatus ? 0.7 : 1
+                }
+              ]}
+              onPress={() => updateOrderStatus(nextAction.action)}
+              disabled={isUpdatingStatus}
+            >
+              {isUpdatingStatus ? (
+                <Icon name="hourglass-empty" size={20} color="#fff" />
+              ) : (
+                <Icon name="check-circle" size={20} color="#fff" />
+              )}
+              <Text style={styles.primaryButtonText}>
+                {isUpdatingStatus ? 'Updating...' : nextAction.text}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
       </View>
     </View>
   );
@@ -622,93 +695,149 @@ export default function NavigationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginBlockStart: 2,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f1f5f9',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#f1f5f9',
+    padding: 20,
+  },
+  loadingCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   loadingText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginTop: 16,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 8,
+    textAlign: 'center',
   },
   errorText: {
     marginTop: 100,
     textAlign: 'center',
-    color: 'red',
+    color: '#dc2626',
     fontSize: 16,
+    fontWeight: '500',
   },
   backButton: {
     marginTop: 20,
     padding: 15,
-    backgroundColor: '#2196F3',
-    borderRadius: 8,
+    backgroundColor: '#3b82f6',
+    borderRadius: 12,
     alignSelf: 'center',
   },
   backButtonText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   header: {
-    backgroundColor: '#fff',
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 20,
   },
   headerContent: {
     maxWidth: '100%',
   },
-  customerName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+  statusBadgeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  orderAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    marginBottom: 8,
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  orderId: {
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusBadgeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#dbeafe',
+  },
+  orderIdBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  orderIdText: {
     fontSize: 12,
-    color: '#888',
-    marginTop: 4,
+    color: '#bfdbfe',
+    fontWeight: '500',
+  },
+  customerInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  customerAvatarContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    padding: 8,
+    marginRight: 12,
+  },
+  customerDetails: {
+    flex: 1,
+  },
+  customerName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 2,
   },
   phoneNumber: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    color: '#bfdbfe',
   },
-  statusContainer: {
+  amountContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    padding: 12,
   },
-  statusDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 8,
+  amountDetails: {
+    marginLeft: 8,
+    flex: 1,
   },
-  statusText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
+  amountLabel: {
+    fontSize: 12,
+    color: '#bfdbfe',
+    marginBottom: 2,
+  },
+  amountValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#bbf7d0',
   },
   mapContainer: {
     height: height * 0.35,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    position: 'relative',
   },
   map: {
     flex: 1,
@@ -723,187 +852,250 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#2196F3',
-    borderWidth: 2,
+    backgroundColor: '#3b82f6',
+    borderWidth: 3,
     borderColor: '#fff',
   },
   customerLocationMarker: {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  floatingCallButton: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    backgroundColor: '#3b82f6',
+    borderRadius: 24,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   detailsScrollContainer: {
     flex: 1,
   },
   detailsContainer: {
-    padding: 20,
-    paddingBottom: 10,
+    padding: 16,
+    paddingBottom: 100,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
-  },
-  detailCard: {
+  modernCard: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
+    borderRadius: 16,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
   },
-  itemsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  paymentCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  metaCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  detailRow: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
-  detailIcon: {
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginLeft: 8,
+    flex: 1,
+  },
+  itemCountBadge: {
+    backgroundColor: '#dbeafe',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  itemCountText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1e40af',
+  },
+  cardContent: {
+    padding: 16,
+  },
+  modernDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  iconContainer: {
+    backgroundColor: '#dbeafe',
+    borderRadius: 8,
+    padding: 8,
     marginRight: 12,
   },
-  detailTextContainer: {
+  detailContent: {
     flex: 1,
   },
   detailLabel: {
     fontSize: 12,
-    color: '#888',
-    marginBottom: 2,
+    fontWeight: '500',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
   detailText: {
     fontSize: 15,
-    color: '#555',
+    color: '#1e293b',
+    fontWeight: '500',
+  },
+  deliveryOptionText: {
+    fontSize: 14,
+    color: '#3b82f6',
+    marginTop: 2,
   },
   coordinatesText: {
     fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-    fontFamily: 'monospace',
+    color: '#64748b',
+    marginTop: 4,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
-  itemRow: {
+  itemCard: {
+    backgroundColor: '#dbeafe',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
     flexDirection: 'row',
-    marginBottom: 8,
-    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  bullet: {
-    marginRight: 10,
-    fontSize: 16,
-    color: '#666',
-  },
-  itemDetails: {
+  itemInfo: {
     flex: 1,
   },
   itemName: {
     fontSize: 15,
-    color: '#444',
-    fontWeight: '500',
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 2,
   },
-  itemQuantityPrice: {
+  itemQuantity: {
     fontSize: 13,
-    color: '#666',
+    color: '#64748b',
+  },
+  itemPricing: {
+    alignItems: 'flex-end',
+  },
+  itemTotal: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  itemPrice: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  noItemsContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
   },
   noItemsText: {
-    fontSize: 15,
-    color: '#888',
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 8,
     fontStyle: 'italic',
   },
-  totalAmountContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 15,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  totalAmountLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-  },
-  totalAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  actionContainer: {
-    backgroundColor: '#fff',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+  totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    borderTopColor: '#e2e8f0',
   },
-  primaryButton: {
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  totalAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#3b82f6',
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  paymentLabel: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  paymentValue: {
+    fontSize: 14,
+    color: '#1e293b',
+    fontWeight: '600',
+  },
+  statusChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  actionContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  actionGradient: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  secondaryActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#dbeafe',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#93c5fd',
+  },
+  secondaryButtonText: {
+    marginLeft: 8,
+    color: '#3b82f6',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  primaryActionButton: {
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#2196F3',
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginLeft: 10,
+    paddingVertical: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   primaryButtonText: {
-    marginLeft: 10,
+    marginLeft: 8,
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 16,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#4CAF50',
-    backgroundColor: 'transparent',
-  },
-  secondaryButtonText: {
-    marginLeft: 8,
-    color: '#4CAF50',
-    fontWeight: '600',
-    fontSize: 14,
   },
 });

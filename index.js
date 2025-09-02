@@ -1,14 +1,17 @@
 import { AppRegistry } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
+import { ExpoRoot } from 'expo-router';
 
-// Background handler
+// Firebase background handler
 messaging().setBackgroundMessageHandler(async remoteMessage => {
   console.log('Background message received:', remoteMessage);
   return Promise.resolve();
 });
 
-// Register headless task
 AppRegistry.registerHeadlessTask(
   'RNFirebaseBackgroundMessage',
   () => messaging().setBackgroundMessageHandler
 );
+
+// Register expo-router root
+AppRegistry.registerComponent('main', () => ExpoRoot);

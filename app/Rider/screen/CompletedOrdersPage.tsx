@@ -6,7 +6,6 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -46,7 +45,7 @@ export default function CompletedOrdersPage() {
         }),
         location: booking.address || 'Unknown',
         rating: 5,
-        earnings: Math.round((booking.totalAmount || 0) * 0.1),
+        earnings: booking.totalAmount,
       }));
 
       setCompletedOrders(formattedOrders);
@@ -93,7 +92,6 @@ export default function CompletedOrdersPage() {
         </View>
         <View style={styles.headerRight}>
           <Text style={styles.amount}>{item.amount}</Text>
-          <Text style={styles.earnings}>+RWF {item.earnings.toLocaleString()}</Text>
         </View>
       </View>
 

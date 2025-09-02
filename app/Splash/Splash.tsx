@@ -77,7 +77,7 @@ export default function SplashScreen() {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
+      <StatusBar barStyle="light-content" backgroundColor='#1d4ed8' />
       <LinearGradient
         colors={[colors.primary, '#1e40af', '#1d4ed8']}
         style={styles.container}

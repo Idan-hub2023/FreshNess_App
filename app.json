@@ -8,9 +8,9 @@
     "scheme": "freshness",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/images/log.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1E90FF"
+      "backgroundColor": "#ffffff",
+      "image": "./assets/images/log.png"
     },
     "android": {
       "package": "com.freshness.app",
@@ -51,7 +51,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "11d679a5-8318-4d0b-918e-db27b0831d31"
+        "projectId": "d5c2b4e9-b14a-4237-a41b-1cc2501f0577"
       }
     }
   }
